@@ -1,15 +1,26 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Star, Clock, Users } from 'lucide-react';
+import { useVenueSettings } from '@/hooks/useVenueSettings';
 import heroImage from '@/assets/hero-pool.jpg';
 
 const HeroSection = () => {
+  const { settings } = useVenueSettings();
+  const [backgroundImage, setBackgroundImage] = useState(heroImage);
+
+  useEffect(() => {
+    if (settings?.hero_image_url) {
+      setBackgroundImage(settings.hero_image_url);
+    }
+  }, [settings]);
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background Image */}
       <div className="absolute inset-0">
         <img
-          src={heroImage}
+          src={backgroundImage}
           alt="EJ Eventos - Espaço para festas"
           className="w-full h-full object-cover"
         />
@@ -40,15 +51,15 @@ const HeroSection = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-            <Link to="/register">
+            <a href="#availability">
               <Button
                 size="lg"
                 className="w-full sm:w-auto bg-gradient-accent hover:opacity-90 text-accent-foreground shadow-accent text-lg px-8 py-6 h-auto font-semibold group"
               >
-                Reservar Agora
+                Ver Disponibilidade
                 <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
-            </Link>
+            </a>
             <a href="#amenities">
               <Button
                 size="lg"

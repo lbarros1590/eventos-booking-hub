@@ -5,27 +5,36 @@ import { Calendar } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useApp } from '@/contexts/AppContext';
-import { AMENITIES, PRICING, LOYALTY_THRESHOLD } from '@/lib/constants';
+import { useVenueSettings } from '@/hooks/useVenueSettings';
 import { getIcon } from '@/lib/icons';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarDays, Check, AlertCircle, Sparkles } from 'lucide-react';
+import { CalendarDays, Check, AlertCircle, Sparkles, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+const LOYALTY_THRESHOLD = 4;
+
 const NewReservation = () => {
-  const { profile, isDateBooked, calculatePrice, createBooking } = useApp();
+  const { profile, isDateBooked, createBooking } = useApp();
+  const { settings, calendarExceptions, calculatePriceForDate, isDateBlocked, loading } = useVenueSettings();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [checklistConfirmed, setChecklistConfirmed] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const priceInfo = selectedDate ? calculatePrice(selectedDate) : null;
+  const priceInfo = selectedDate ? calculatePriceForDate(selectedDate, profile?.has_discount) : null;
 
   const handleDateSelect = (date: Date | undefined) => {
-    if (date && isDateBooked(date)) {
-      toast.error('Esta data já está reservada. Escolha outra data.');
-      return;
+    if (date) {
+      if (isDateBooked(date)) {
+        toast.error('Esta data já está reservada. Escolha outra data.');
+        return;
+      }
+      if (isDateBlocked(date)) {
+        toast.error('Esta data está bloqueada. Escolha outra data.');
+        return;
+      }
     }
     setSelectedDate(date);
   };
@@ -33,7 +42,7 @@ const NewReservation = () => {
   const handleSubmit = async () => {
     if (!selectedDate || !priceInfo) return;
 
-    setLoading(true);
+    setSubmitting(true);
 
     const { error } = await createBooking({
       booking_date: selectedDate.toISOString().split('T')[0],
@@ -54,10 +63,20 @@ const NewReservation = () => {
       setTermsAccepted(false);
     }
 
-    setLoading(false);
+    setSubmitting(false);
   };
 
   const isFormValid = selectedDate && checklistConfirmed && termsAccepted;
+
+  if (loading || !settings) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const amenities = settings.amenities_list || [];
 
   return (
     <div className="space-y-6">
@@ -103,13 +122,15 @@ const NewReservation = () => {
               disabled={(date) => {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
-                return date < today || isDateBooked(date);
+                return date < today || isDateBooked(date) || isDateBlocked(date);
               }}
               modifiers={{
                 booked: (date) => isDateBooked(date),
+                blocked: (date) => isDateBlocked(date),
               }}
               modifiersStyles={{
                 booked: { backgroundColor: 'hsl(var(--destructive))', color: 'white' },
+                blocked: { backgroundColor: 'hsl(var(--muted))', color: 'hsl(var(--muted-foreground))', textDecoration: 'line-through' },
               }}
               className="rounded-md border w-full pointer-events-auto"
               locale={ptBR}
@@ -158,7 +179,7 @@ const NewReservation = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-3 mb-6">
-              {AMENITIES.map((amenity) => {
+              {amenities.map((amenity) => {
                 const Icon = getIcon(amenity.icon);
                 return (
                   <div
@@ -202,7 +223,7 @@ const NewReservation = () => {
               <div className="text-sm text-muted-foreground">
                 <p className="font-medium text-foreground mb-1">Importante:</p>
                 <ul className="list-disc list-inside space-y-1">
-                  <li>Duração do evento: {PRICING.partyDuration} horas</li>
+                  <li>Duração do evento: 12 horas</li>
                   <li>Pagamento deve ser feito até 3 dias antes do evento</li>
                   <li>Cancelamento gratuito até 7 dias antes</li>
                 </ul>
@@ -212,10 +233,10 @@ const NewReservation = () => {
             <Button
               className="w-full mt-6 bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-primary"
               size="lg"
-              disabled={!isFormValid || loading}
+              disabled={!isFormValid || submitting}
               onClick={handleSubmit}
             >
-              {loading ? 'Processando...' : 'Solicitar Reserva'}
+              {submitting ? 'Processando...' : 'Solicitar Reserva'}
             </Button>
           </CardContent>
         </Card>
