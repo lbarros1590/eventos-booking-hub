@@ -286,6 +286,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     );
   };
 
+  // This function is now deprecated - use useVenueSettings hook for dynamic pricing
   const calculatePrice = (date: Date): { basePrice: number; cleaningFee: number; total: number } => {
     const dayOfWeek = date.getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6;

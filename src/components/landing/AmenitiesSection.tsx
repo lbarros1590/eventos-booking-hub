@@ -1,8 +1,23 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { AMENITIES } from '@/lib/constants';
+import { useVenueSettings } from '@/hooks/useVenueSettings';
 import { getIcon } from '@/lib/icons';
+import { Loader2 } from 'lucide-react';
 
 const AmenitiesSection = () => {
+  const { settings, loading } = useVenueSettings();
+
+  if (loading) {
+    return (
+      <section id="amenities" className="py-20 md:py-32 bg-background">
+        <div className="container mx-auto px-4 flex justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </section>
+    );
+  }
+
+  const amenities = settings?.amenities_list || [];
+
   return (
     <section id="amenities" className="py-20 md:py-32 bg-background">
       <div className="container mx-auto px-4">
@@ -21,7 +36,7 @@ const AmenitiesSection = () => {
 
         {/* Amenities Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
-          {AMENITIES.map((amenity, index) => {
+          {amenities.map((amenity, index) => {
             const Icon = getIcon(amenity.icon);
             return (
               <Card

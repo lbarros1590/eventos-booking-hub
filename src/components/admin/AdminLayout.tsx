@@ -12,6 +12,7 @@ import {
   X,
   Home,
   Settings,
+  FileBarChart,
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -33,7 +34,9 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { label: 'Visão Geral', icon: LayoutDashboard, path: '/admin' },
     { label: 'Calendário', icon: CalendarDays, path: '/admin/calendar' },
     { label: 'Financeiro', icon: DollarSign, path: '/admin/financial' },
+    { label: 'Relatórios', icon: FileBarChart, path: '/admin/reports' },
     { label: 'Clientes', icon: Users, path: '/admin/clients' },
+    { label: 'Configurações', icon: Settings, path: '/admin/settings' },
   ];
 
   const isActive = (path: string) => location.pathname === path;

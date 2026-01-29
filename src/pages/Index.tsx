@@ -3,6 +3,7 @@ import Footer from '@/components/Footer';
 import WhatsAppFAB from '@/components/WhatsAppFAB';
 import HeroSection from '@/components/landing/HeroSection';
 import AmenitiesSection from '@/components/landing/AmenitiesSection';
+import AvailabilityCalendar from '@/components/landing/AvailabilityCalendar';
 import PricingSection from '@/components/landing/PricingSection';
 import LocationSection from '@/components/landing/LocationSection';
 
@@ -12,6 +13,7 @@ const Index = () => {
       <Header />
       <main>
         <HeroSection />
+        <AvailabilityCalendar />
         <AmenitiesSection />
         <PricingSection />
         <LocationSection />

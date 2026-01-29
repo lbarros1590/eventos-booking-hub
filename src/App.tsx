@@ -14,6 +14,8 @@ import Admin from "./pages/Admin";
 import AdminCalendarPage from "./pages/AdminCalendar";
 import AdminFinancialPage from "./pages/AdminFinancial";
 import AdminClientsPage from "./pages/AdminClients";
+import AdminSettingsPage from "./pages/AdminSettings";
+import AdminReportsPage from "./pages/AdminReports";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,11 +33,14 @@ const App = () => (
             <Route path="/register" element={<Register />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/dashboard/reservations" element={<Reservations />} />
+            <Route path="/dashboard/reservas/nova" element={<Dashboard />} />
             <Route path="/dashboard/loyalty" element={<Loyalty />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/admin/calendar" element={<AdminCalendarPage />} />
             <Route path="/admin/financial" element={<AdminFinancialPage />} />
             <Route path="/admin/clients" element={<AdminClientsPage />} />
+            <Route path="/admin/settings" element={<AdminSettingsPage />} />
+            <Route path="/admin/reports" element={<AdminReportsPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

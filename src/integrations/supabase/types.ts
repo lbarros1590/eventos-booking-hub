@@ -56,6 +56,33 @@ export type Database = {
         }
         Relationships: []
       }
+      calendar_exceptions: {
+        Row: {
+          created_at: string
+          custom_price: number | null
+          exception_date: string
+          id: string
+          is_blocked: boolean
+          note: string | null
+        }
+        Insert: {
+          created_at?: string
+          custom_price?: number | null
+          exception_date: string
+          id?: string
+          is_blocked?: boolean
+          note?: string | null
+        }
+        Update: {
+          created_at?: string
+          custom_price?: number | null
+          exception_date?: string
+          id?: string
+          is_blocked?: boolean
+          note?: string | null
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount: number
@@ -131,6 +158,42 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      venue_settings: {
+        Row: {
+          amenities_list: Json | null
+          base_price_weekday: number
+          base_price_weekend: number
+          cleaning_fee: number
+          created_at: string
+          global_discount_percent: number
+          hero_image_url: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          amenities_list?: Json | null
+          base_price_weekday?: number
+          base_price_weekend?: number
+          cleaning_fee?: number
+          created_at?: string
+          global_discount_percent?: number
+          hero_image_url?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          amenities_list?: Json | null
+          base_price_weekday?: number
+          base_price_weekend?: number
+          cleaning_fee?: number
+          created_at?: string
+          global_discount_percent?: number
+          hero_image_url?: string | null
+          id?: string
+          updated_at?: string
         }
         Relationships: []
       }

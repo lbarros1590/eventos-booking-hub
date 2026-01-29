@@ -1,14 +1,35 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PRICING } from '@/lib/constants';
-import { Check, Sparkles } from 'lucide-react';
+import { useVenueSettings } from '@/hooks/useVenueSettings';
+import { Check, Sparkles, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const PricingSection = () => {
+  const { settings, loading } = useVenueSettings();
+
+  if (loading || !settings) {
+    return (
+      <section id="pricing" className="py-20 md:py-32 bg-secondary">
+        <div className="container mx-auto px-4 flex justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </section>
+    );
+  }
+
+  const weekdayPrice = settings.global_discount_percent > 0 
+    ? Math.round(settings.base_price_weekday * (1 - settings.global_discount_percent / 100))
+    : settings.base_price_weekday;
+
+  const weekendPrice = settings.global_discount_percent > 0
+    ? Math.round(settings.base_price_weekend * (1 - settings.global_discount_percent / 100))
+    : settings.base_price_weekend;
+
   const pricingPlans = [
     {
-      title: PRICING.weekday.label,
-      price: PRICING.weekday.price,
+      title: 'Segunda a Quinta',
+      price: weekdayPrice,
+      originalPrice: settings.global_discount_percent > 0 ? settings.base_price_weekday : null,
       popular: false,
       features: [
         '12 horas de evento',
@@ -19,8 +40,9 @@ const PricingSection = () => {
       ],
     },
     {
-      title: PRICING.weekend.label,
-      price: PRICING.weekend.price,
+      title: 'Sexta a Domingo',
+      price: weekendPrice,
+      originalPrice: settings.global_discount_percent > 0 ? settings.base_price_weekend : null,
       popular: true,
       features: [
         '12 horas de evento',
@@ -47,6 +69,12 @@ const PricingSection = () => {
           <p className="text-muted-foreground text-lg">
             Valores acessíveis para você realizar o evento dos seus sonhos.
           </p>
+          {settings.global_discount_percent > 0 && (
+            <div className="mt-4 inline-flex items-center gap-2 bg-accent/10 text-accent px-4 py-2 rounded-full">
+              <Sparkles size={16} />
+              <span className="font-medium">Promoção: {settings.global_discount_percent}% de desconto!</span>
+            </div>
+          )}
         </div>
 
         {/* Pricing Cards */}
@@ -75,6 +103,11 @@ const PricingSection = () => {
               </CardHeader>
               <CardContent className="text-center">
                 <div className="mb-6">
+                  {plan.originalPrice && (
+                    <span className="text-2xl text-muted-foreground line-through mr-2">
+                      R$ {plan.originalPrice}
+                    </span>
+                  )}
                   <span className="text-5xl md:text-6xl font-display font-bold text-foreground">
                     R$ {plan.price}
                   </span>
@@ -92,7 +125,7 @@ const PricingSection = () => {
                   ))}
                 </ul>
 
-                <Link to="/register">
+                <a href="#availability">
                   <Button
                     className={`w-full ${
                       plan.popular
@@ -103,7 +136,7 @@ const PricingSection = () => {
                   >
                     Reservar Este Dia
                   </Button>
-                </Link>
+                </a>
               </CardContent>
             </Card>
           ))}
@@ -113,7 +146,7 @@ const PricingSection = () => {
         <div className="text-center mt-12">
           <div className="inline-flex items-center gap-3 bg-card rounded-full px-6 py-3 shadow-sm border border-border">
             <span className="text-muted-foreground">Taxa de limpeza:</span>
-            <span className="font-semibold text-foreground">R$ {PRICING.cleaningFee},00</span>
+            <span className="font-semibold text-foreground">R$ {settings.cleaning_fee},00</span>
             <span className="text-muted-foreground text-sm">(obrigatória)</span>
           </div>
         </div>
