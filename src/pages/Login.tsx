@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,8 +12,15 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn } = useApp();
+  const { signIn, user, role } = useApp();
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && role) {
+      navigate(role === 'admin' ? '/admin' : '/dashboard');
+    }
+  }, [user, role, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,12 +30,11 @@ const Login = () => {
     
     if (error) {
       toast.error(error.message || 'Erro ao fazer login. Verifique suas credenciais.');
+      setLoading(false);
     } else {
       toast.success('Login realizado com sucesso!');
-      navigate('/dashboard');
+      // Navigation will happen via useEffect when role is loaded
     }
-
-    setLoading(false);
   };
 
   return (
