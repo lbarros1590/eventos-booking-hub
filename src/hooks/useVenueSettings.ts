@@ -7,6 +7,12 @@ export interface Amenity {
   icon: string;
 }
 
+export interface ChecklistItem {
+  id: number;
+  item: string;
+  checked: boolean;
+}
+
 export interface VenueSettings {
   id: string;
   base_price_weekday: number;
@@ -14,6 +20,9 @@ export interface VenueSettings {
   cleaning_fee: number;
   global_discount_percent: number;
   hero_image_url: string | null;
+  gallery_urls: string[];
+  payment_terms_text: string;
+  default_checklist_items: ChecklistItem[];
   amenities_list: Amenity[];
 }
 
@@ -44,6 +53,9 @@ export const useVenueSettings = () => {
         setSettings({
           ...data,
           amenities_list: (data.amenities_list as unknown as Amenity[]) || [],
+          gallery_urls: (data.gallery_urls as string[]) || [],
+          payment_terms_text: (data.payment_terms_text as string) || '50% no ato da reserva, 50% na entrega das chaves.',
+          default_checklist_items: (data.default_checklist_items as unknown as ChecklistItem[]) || [],
         });
       }
     } catch (error) {
@@ -73,6 +85,9 @@ export const useVenueSettings = () => {
     const dbUpdates: Record<string, unknown> = { ...updates };
     if (updates.amenities_list) {
       dbUpdates.amenities_list = updates.amenities_list as unknown;
+    }
+    if (updates.default_checklist_items) {
+      dbUpdates.default_checklist_items = updates.default_checklist_items as unknown;
     }
 
     const { error } = await supabase
@@ -125,9 +140,13 @@ export const useVenueSettings = () => {
     return { error };
   };
 
-  const calculatePriceForDate = (date: Date, hasLoyaltyDiscount: boolean = false): { basePrice: number; cleaningFee: number; total: number } => {
+  const calculatePriceForDate = (
+    date: Date, 
+    hasLoyaltyDiscount: boolean = false,
+    waiveCleaningFee: boolean = false
+  ): { basePrice: number; cleaningFee: number; total: number; deposit: number } => {
     if (!settings) {
-      return { basePrice: 0, cleaningFee: 0, total: 0 };
+      return { basePrice: 0, cleaningFee: 0, total: 0, deposit: 0 };
     }
 
     const dateStr = date.toISOString().split('T')[0];
@@ -150,7 +169,7 @@ export const useVenueSettings = () => {
       basePrice = basePrice * (1 - settings.global_discount_percent / 100);
     }
 
-    const cleaningFee = settings.cleaning_fee;
+    const cleaningFee = waiveCleaningFee ? 0 : settings.cleaning_fee;
     let total = basePrice + cleaningFee;
 
     // Apply loyalty discount
@@ -158,7 +177,10 @@ export const useVenueSettings = () => {
       total = total * 0.8;
     }
 
-    return { basePrice: Math.round(basePrice), cleaningFee, total: Math.round(total) };
+    const roundedTotal = Math.round(total);
+    const deposit = Math.round(roundedTotal / 2);
+
+    return { basePrice: Math.round(basePrice), cleaningFee, total: roundedTotal, deposit };
   };
 
   const isDateBlocked = (date: Date): boolean => {

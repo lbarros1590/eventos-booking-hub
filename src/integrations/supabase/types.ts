@@ -20,39 +20,54 @@ export type Database = {
           checklist_confirmed: boolean
           cleaning_fee: number
           created_at: string
+          custom_checklist_items: Json | null
+          deposit_paid: boolean
+          final_balance_paid: boolean
           id: string
+          manual_price_override: number | null
           price: number
           status: string
           terms_accepted: boolean
           total_price: number
           updated_at: string
           user_id: string
+          waive_cleaning_fee: boolean
         }
         Insert: {
           booking_date: string
           checklist_confirmed?: boolean
           cleaning_fee?: number
           created_at?: string
+          custom_checklist_items?: Json | null
+          deposit_paid?: boolean
+          final_balance_paid?: boolean
           id?: string
+          manual_price_override?: number | null
           price: number
           status?: string
           terms_accepted?: boolean
           total_price: number
           updated_at?: string
           user_id: string
+          waive_cleaning_fee?: boolean
         }
         Update: {
           booking_date?: string
           checklist_confirmed?: boolean
           cleaning_fee?: number
           created_at?: string
+          custom_checklist_items?: Json | null
+          deposit_paid?: boolean
+          final_balance_paid?: boolean
           id?: string
+          manual_price_override?: number | null
           price?: number
           status?: string
           terms_accepted?: boolean
           total_price?: number
           updated_at?: string
           user_id?: string
+          waive_cleaning_fee?: boolean
         }
         Relationships: []
       }
@@ -168,9 +183,12 @@ export type Database = {
           base_price_weekend: number
           cleaning_fee: number
           created_at: string
+          default_checklist_items: Json | null
+          gallery_urls: string[] | null
           global_discount_percent: number
           hero_image_url: string | null
           id: string
+          payment_terms_text: string | null
           updated_at: string
         }
         Insert: {
@@ -179,9 +197,12 @@ export type Database = {
           base_price_weekend?: number
           cleaning_fee?: number
           created_at?: string
+          default_checklist_items?: Json | null
+          gallery_urls?: string[] | null
           global_discount_percent?: number
           hero_image_url?: string | null
           id?: string
+          payment_terms_text?: string | null
           updated_at?: string
         }
         Update: {
@@ -190,9 +211,12 @@ export type Database = {
           base_price_weekend?: number
           cleaning_fee?: number
           created_at?: string
+          default_checklist_items?: Json | null
+          gallery_urls?: string[] | null
           global_discount_percent?: number
           hero_image_url?: string | null
           id?: string
+          payment_terms_text?: string | null
           updated_at?: string
         }
         Relationships: []

@@ -4,7 +4,6 @@ import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -12,8 +11,9 @@ import { useApp, Booking } from '@/contexts/AppContext';
 import { useVenueSettings, CalendarException } from '@/hooks/useVenueSettings';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarDays, Phone, User, DollarSign, XCircle, CheckCircle, Loader2, Plus, Trash2 } from 'lucide-react';
+import { CalendarDays, Loader2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import BookingDetailsModal from './BookingDetailsModal';
 
 const AdminCalendar = () => {
   const { bookings, profiles, updateBookingStatus, refreshData } = useApp();
@@ -22,7 +22,6 @@ const AdminCalendar = () => {
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [exceptionModalOpen, setExceptionModalOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [updating, setUpdating] = useState(false);
   
   // Exception form state
   const [exceptionDate, setExceptionDate] = useState<Date | undefined>();
@@ -53,25 +52,15 @@ const AdminCalendar = () => {
     }
   };
 
-  const getUserName = (userId: string) => {
-    const profile = profiles.find(p => p.user_id === userId);
-    return profile?.name || 'Cliente';
-  };
-
-  const getUserPhone = (userId: string) => {
-    const profile = profiles.find(p => p.user_id === userId);
-    return profile?.phone || 'Não informado';
+  const getSelectedBookingProfile = () => {
+    if (!selectedBooking) return null;
+    return profiles.find(p => p.user_id === selectedBooking.user_id) || null;
   };
 
   const handleStatusChange = async (newStatus: Booking['status']) => {
     if (!selectedBooking) return;
-    setUpdating(true);
-    
     await updateBookingStatus(selectedBooking.id, newStatus);
     toast.success(`Status atualizado para ${getStatusLabel(newStatus)}`);
-    
-    setUpdating(false);
-    setBookingModalOpen(false);
     await refreshData();
   };
 
@@ -82,21 +71,6 @@ const AdminCalendar = () => {
       case 'completed': return 'Concluída';
       case 'cancelled': return 'Cancelada';
       default: return status;
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">Pendente</Badge>;
-      case 'confirmed':
-        return <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">Confirmada</Badge>;
-      case 'completed':
-        return <Badge variant="outline" className="bg-success/10 text-success border-success/30">Concluída</Badge>;
-      case 'cancelled':
-        return <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30">Cancelada</Badge>;
-      default:
-        return null;
     }
   };
 
@@ -322,108 +296,14 @@ const AdminCalendar = () => {
       </Card>
 
       {/* Booking Details Modal */}
-      <Dialog open={bookingModalOpen} onOpenChange={setBookingModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Detalhes da Reserva</DialogTitle>
-            <DialogDescription>
-              {selectedBooking && format(parseISO(selectedBooking.booking_date), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedBooking && (
-            <div className="space-y-6">
-              {/* Status */}
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Status atual</span>
-                {getStatusBadge(selectedBooking.status)}
-              </div>
-
-              {/* Client Info */}
-              <div className="p-4 bg-secondary rounded-xl space-y-3">
-                <div className="flex items-center gap-3">
-                  <User className="w-5 h-5 text-primary" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Cliente</p>
-                    <p className="font-semibold text-foreground">{getUserName(selectedBooking.user_id)}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Phone className="w-5 h-5 text-primary" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Telefone</p>
-                    <p className="font-semibold text-foreground">{getUserPhone(selectedBooking.user_id)}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Financial */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Diária</span>
-                  <span>R$ {Number(selectedBooking.price).toFixed(0)},00</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Taxa de limpeza</span>
-                  <span>R$ {Number(selectedBooking.cleaning_fee).toFixed(0)},00</span>
-                </div>
-                <div className="flex justify-between font-bold pt-2 border-t border-border">
-                  <span>Total</span>
-                  <span className="text-primary">R$ {Number(selectedBooking.total_price).toFixed(0)},00</span>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="grid grid-cols-2 gap-3">
-                {selectedBooking.status === 'pending' && (
-                  <>
-                    <Button
-                      onClick={() => handleStatusChange('confirmed')}
-                      disabled={updating}
-                      className="bg-primary hover:bg-primary/90"
-                    >
-                      {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
-                      Confirmar
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={() => handleStatusChange('cancelled')}
-                      disabled={updating}
-                    >
-                      {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4 mr-2" />}
-                      Cancelar
-                    </Button>
-                  </>
-                )}
-                {selectedBooking.status === 'confirmed' && (
-                  <>
-                    <Button
-                      onClick={() => handleStatusChange('completed')}
-                      disabled={updating}
-                      className="bg-success hover:bg-success/90"
-                    >
-                      {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
-                      Concluir
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={() => handleStatusChange('cancelled')}
-                      disabled={updating}
-                    >
-                      {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4 mr-2" />}
-                      Cancelar
-                    </Button>
-                  </>
-                )}
-              </div>
-
-              <div className="text-xs text-muted-foreground">
-                Reserva criada em {format(parseISO(selectedBooking.created_at), 'dd/MM/yyyy HH:mm')}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <BookingDetailsModal
+        open={bookingModalOpen}
+        onOpenChange={setBookingModalOpen}
+        booking={selectedBooking}
+        profile={getSelectedBookingProfile()}
+        onStatusChange={handleStatusChange}
+        onRefresh={refreshData}
+      />
 
       {/* Exception Modal */}
       <Dialog open={exceptionModalOpen} onOpenChange={setExceptionModalOpen}>

@@ -10,7 +10,7 @@ import { getIcon } from '@/lib/icons';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarDays, Check, AlertCircle, Sparkles, Loader2 } from 'lucide-react';
+import { CalendarDays, Check, AlertCircle, Sparkles, Loader2, ChevronLeft, ChevronRight, Image } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const LOYALTY_THRESHOLD = 4;
@@ -22,8 +22,10 @@ const NewReservation = () => {
   const [checklistConfirmed, setChecklistConfirmed] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [galleryIndex, setGalleryIndex] = useState(0);
 
   const priceInfo = selectedDate ? calculatePriceForDate(selectedDate, profile?.has_discount) : null;
+  const galleryUrls = settings?.gallery_urls || [];
 
   const handleDateSelect = (date: Date | undefined) => {
     if (date) {
@@ -68,6 +70,10 @@ const NewReservation = () => {
 
   const isFormValid = selectedDate && checklistConfirmed && termsAccepted;
 
+  const isVideo = (url: string) => {
+    return url.toLowerCase().endsWith('.mp4') || url.toLowerCase().endsWith('.webm');
+  };
+
   if (loading || !settings) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -88,6 +94,67 @@ const NewReservation = () => {
           Selecione a data desejada e confirme os itens do espaço
         </p>
       </div>
+
+      {/* Gallery Preview */}
+      {galleryUrls.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Image className="w-5 h-5 text-primary" />
+              Galeria do Espaço
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="relative aspect-video rounded-xl overflow-hidden">
+              {isVideo(galleryUrls[galleryIndex]) ? (
+                <video
+                  src={galleryUrls[galleryIndex]}
+                  className="w-full h-full object-cover"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                />
+              ) : (
+                <img
+                  src={galleryUrls[galleryIndex]}
+                  alt={`Espaço ${galleryIndex + 1}`}
+                  className="w-full h-full object-cover"
+                />
+              )}
+              
+              {galleryUrls.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setGalleryIndex((prev) => (prev - 1 + galleryUrls.length) % galleryUrls.length)}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 flex items-center justify-center text-white hover:bg-black/60 transition-colors"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => setGalleryIndex((prev) => (prev + 1) % galleryUrls.length)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 flex items-center justify-center text-white hover:bg-black/60 transition-colors"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
+                    {galleryUrls.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setGalleryIndex(idx)}
+                        className={cn(
+                          "w-2 h-2 rounded-full transition-all",
+                          idx === galleryIndex ? "w-6 bg-white" : "bg-white/50"
+                        )}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Loyalty Badge */}
       {profile && profile.reservation_count >= LOYALTY_THRESHOLD && profile.has_discount && (
@@ -160,6 +227,10 @@ const NewReservation = () => {
                     <span>Total:</span>
                     <span className="text-primary">R$ {priceInfo.total},00</span>
                   </div>
+                  <div className="flex justify-between text-sm pt-2 border-t border-border">
+                    <span className="text-muted-foreground">Sinal (50%):</span>
+                    <span className="font-semibold text-accent">R$ {priceInfo.deposit},00</span>
+                  </div>
                 </div>
               </div>
             )}
@@ -224,7 +295,7 @@ const NewReservation = () => {
                 <p className="font-medium text-foreground mb-1">Importante:</p>
                 <ul className="list-disc list-inside space-y-1">
                   <li>Duração do evento: 12 horas</li>
-                  <li>Pagamento deve ser feito até 3 dias antes do evento</li>
+                  <li>{settings?.payment_terms_text || '50% no ato da reserva, 50% na entrega das chaves.'}</li>
                   <li>Cancelamento gratuito até 7 dias antes</li>
                 </ul>
               </div>

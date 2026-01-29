@@ -24,6 +24,11 @@ export interface Booking {
   checklist_confirmed: boolean;
   terms_accepted: boolean;
   created_at: string;
+  deposit_paid?: boolean;
+  final_balance_paid?: boolean;
+  manual_price_override?: number | null;
+  waive_cleaning_fee?: boolean;
+  custom_checklist_items?: any[] | null;
 }
 
 export interface Expense {
