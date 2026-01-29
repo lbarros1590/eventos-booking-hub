@@ -19,12 +19,12 @@ interface DashboardLayoutProps {
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, logout } = useApp();
+  const { user, profile, signOut } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut();
     navigate('/');
   };
 
@@ -87,7 +87,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 <User className="w-5 h-5 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-foreground truncate">{user?.name}</p>
+                <p className="font-medium text-foreground truncate">{profile?.name || user?.email}</p>
                 <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
               </div>
             </div>

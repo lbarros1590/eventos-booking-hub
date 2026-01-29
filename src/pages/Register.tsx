@@ -15,7 +15,7 @@ const Register = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { register } = useApp();
+  const { signUp } = useApp();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,18 +26,24 @@ const Register = () => {
       return;
     }
 
+    if (password.length < 6) {
+      toast.error('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+
     setLoading(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    const success = register(email, password, name, phone);
+    const { error } = await signUp(email, password, name, phone);
     
-    if (success) {
+    if (error) {
+      if (error.message.includes('already registered')) {
+        toast.error('Este email já está cadastrado. Tente fazer login.');
+      } else {
+        toast.error(error.message || 'Erro ao criar conta. Tente novamente.');
+      }
+    } else {
       toast.success('Conta criada com sucesso!');
       navigate('/dashboard');
-    } else {
-      toast.error('Este email já está cadastrado');
     }
 
     setLoading(false);

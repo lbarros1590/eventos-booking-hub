@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useApp } from '@/contexts/AppContext';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   DollarSign,
@@ -12,40 +12,53 @@ import {
 } from 'lucide-react';
 
 const AdminOverview = () => {
-  const { bookings, expenses } = useApp();
+  const { bookings, expenses, profiles } = useApp();
 
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
 
   // Calculate revenue this month
   const monthlyBookings = bookings.filter((b) => {
-    const bookingMonth = b.date.getMonth();
-    const bookingYear = b.date.getFullYear();
+    const bookingDate = parseISO(b.booking_date);
+    const bookingMonth = bookingDate.getMonth();
+    const bookingYear = bookingDate.getFullYear();
     return bookingMonth === currentMonth && bookingYear === currentYear && b.status !== 'cancelled';
   });
 
-  const monthlyRevenue = monthlyBookings.reduce((sum, b) => sum + b.totalPrice, 0);
+  const monthlyRevenue = monthlyBookings.reduce((sum, b) => sum + Number(b.total_price), 0);
 
   // Pending payments (pending bookings)
   const pendingBookings = bookings.filter((b) => b.status === 'pending');
-  const pendingAmount = pendingBookings.reduce((sum, b) => sum + b.totalPrice, 0);
+  const pendingAmount = pendingBookings.reduce((sum, b) => sum + Number(b.total_price), 0);
 
   // Next event
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const upcomingBookings = bookings
-    .filter((b) => b.date >= today && b.status !== 'cancelled')
-    .sort((a, b) => a.date.getTime() - b.date.getTime());
+    .filter((b) => parseISO(b.booking_date) >= today && b.status !== 'cancelled')
+    .sort((a, b) => parseISO(a.booking_date).getTime() - parseISO(b.booking_date).getTime());
   const nextEvent = upcomingBookings[0];
+
+  // Get user name from profiles
+  const getUserName = (userId: string) => {
+    const profile = profiles.find(p => p.user_id === userId);
+    return profile?.name || 'Cliente';
+  };
+
+  const getUserPhone = (userId: string) => {
+    const profile = profiles.find(p => p.user_id === userId);
+    return profile?.phone || '';
+  };
 
   // Monthly expenses
   const monthlyExpenses = expenses
     .filter((e) => {
-      const expenseMonth = e.date.getMonth();
-      const expenseYear = e.date.getFullYear();
+      const expenseDate = parseISO(e.expense_date);
+      const expenseMonth = expenseDate.getMonth();
+      const expenseYear = expenseDate.getFullYear();
       return expenseMonth === currentMonth && expenseYear === currentYear;
     })
-    .reduce((sum, e) => sum + e.amount, 0);
+    .reduce((sum, e) => sum + Number(e.amount), 0);
 
   const profit = monthlyRevenue - monthlyExpenses;
 
@@ -105,10 +118,10 @@ const AdminOverview = () => {
                 {nextEvent ? (
                   <>
                     <p className="text-lg font-bold text-foreground mt-1">
-                      {format(nextEvent.date, 'dd/MM', { locale: ptBR })}
+                      {format(parseISO(nextEvent.booking_date), 'dd/MM', { locale: ptBR })}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {nextEvent.userName}
+                      {getUserName(nextEvent.user_id)}
                     </p>
                   </>
                 ) : (
@@ -163,18 +176,21 @@ const AdminOverview = () => {
                     }`} />
                     <div>
                       <p className="font-medium text-foreground text-sm">
-                        {booking.userName}
+                        {getUserName(booking.user_id)}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {format(booking.date, "dd 'de' MMM", { locale: ptBR })}
+                        {format(parseISO(booking.booking_date), "dd 'de' MMM", { locale: ptBR })}
                       </p>
                     </div>
                   </div>
                   <span className="font-semibold text-foreground text-sm">
-                    R$ {booking.totalPrice}
+                    R$ {Number(booking.total_price).toFixed(0)}
                   </span>
                 </div>
               ))}
+              {bookings.length === 0 && (
+                <p className="text-muted-foreground text-center py-4">Nenhuma reserva ainda</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -205,10 +221,10 @@ const AdminOverview = () => {
                       )}
                       <div>
                         <p className="font-medium text-foreground text-sm">
-                          {format(booking.date, "EEEE, dd/MM", { locale: ptBR })}
+                          {format(parseISO(booking.booking_date), "EEEE, dd/MM", { locale: ptBR })}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {booking.userName} • {booking.userPhone}
+                          {getUserName(booking.user_id)} • {getUserPhone(booking.user_id)}
                         </p>
                       </div>
                     </div>

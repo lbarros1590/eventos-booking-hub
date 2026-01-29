@@ -3,24 +3,33 @@ import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { useApp } from '@/contexts/AppContext';
 import { useState } from 'react';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarDays, Phone, DollarSign } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { CalendarDays, Phone } from 'lucide-react';
 
 const AdminCalendar = () => {
-  const { bookings } = useApp();
+  const { bookings, profiles } = useApp();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
 
   const bookedDates = bookings
     .filter((b) => b.status !== 'cancelled')
-    .map((b) => b.date);
+    .map((b) => parseISO(b.booking_date));
 
   const selectedBooking = selectedDate
     ? bookings.find(
-        (b) => b.date.toDateString() === selectedDate.toDateString() && b.status !== 'cancelled'
+        (b) => b.booking_date === selectedDate.toISOString().split('T')[0] && b.status !== 'cancelled'
       )
     : null;
+
+  const getUserName = (userId: string) => {
+    const profile = profiles.find(p => p.user_id === userId);
+    return profile?.name || 'Cliente';
+  };
+
+  const getUserPhone = (userId: string) => {
+    const profile = profiles.find(p => p.user_id === userId);
+    return profile?.phone || '';
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -98,31 +107,31 @@ const AdminCalendar = () => {
                 <div className="p-4 bg-secondary rounded-xl space-y-3">
                   <div>
                     <p className="text-xs text-muted-foreground">Cliente</p>
-                    <p className="font-semibold text-foreground">{selectedBooking.userName}</p>
+                    <p className="font-semibold text-foreground">{getUserName(selectedBooking.user_id)}</p>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Phone className="w-4 h-4" />
-                    <span>{selectedBooking.userPhone}</span>
+                    <span>{getUserPhone(selectedBooking.user_id)}</span>
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Diária</span>
-                    <span>R$ {selectedBooking.price},00</span>
+                    <span>R$ {Number(selectedBooking.price).toFixed(0)},00</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Taxa de limpeza</span>
-                    <span>R$ {selectedBooking.cleaningFee},00</span>
+                    <span>R$ {Number(selectedBooking.cleaning_fee).toFixed(0)},00</span>
                   </div>
                   <div className="flex justify-between font-bold pt-2 border-t border-border">
                     <span>Total</span>
-                    <span className="text-primary">R$ {selectedBooking.totalPrice},00</span>
+                    <span className="text-primary">R$ {Number(selectedBooking.total_price).toFixed(0)},00</span>
                   </div>
                 </div>
 
                 <div className="text-xs text-muted-foreground">
-                  Reserva criada em {format(selectedBooking.createdAt, 'dd/MM/yyyy')}
+                  Reserva criada em {format(parseISO(selectedBooking.created_at), 'dd/MM/yyyy')}
                 </div>
               </div>
             ) : selectedDate ? (

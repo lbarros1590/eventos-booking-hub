@@ -5,12 +5,12 @@ import { LOYALTY_THRESHOLD, LOYALTY_DISCOUNT } from '@/lib/constants';
 import { Gift, Star, Trophy, Sparkles } from 'lucide-react';
 
 const LoyaltyProgram = () => {
-  const { user } = useApp();
+  const { profile } = useApp();
 
-  const reservationCount = user?.reservationCount || 0;
+  const reservationCount = profile?.reservation_count || 0;
   const progress = Math.min((reservationCount / LOYALTY_THRESHOLD) * 100, 100);
   const remaining = Math.max(LOYALTY_THRESHOLD - reservationCount, 0);
-  const hasDiscount = user?.hasDiscount || false;
+  const hasDiscount = profile?.has_discount || false;
 
   return (
     <div className="space-y-6">

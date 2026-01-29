@@ -14,11 +14,11 @@ import { CalendarDays, Check, AlertCircle, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NewReservation = () => {
-  const { user, isDateBooked, calculatePrice, createBooking } = useApp();
+  const { profile, isDateBooked, calculatePrice, createBooking } = useApp();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [checklistConfirmed, setChecklistConfirmed] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
 
   const priceInfo = selectedDate ? calculatePrice(selectedDate) : null;
 
@@ -28,32 +28,33 @@ const NewReservation = () => {
       return;
     }
     setSelectedDate(date);
-    if (date) {
-      setStep(2);
-    }
   };
 
-  const handleSubmit = () => {
-    if (!selectedDate || !user || !priceInfo) return;
+  const handleSubmit = async () => {
+    if (!selectedDate || !priceInfo) return;
 
-    createBooking({
-      userId: user.id,
-      userName: user.name,
-      userPhone: user.phone,
-      date: selectedDate,
+    setLoading(true);
+
+    const { error } = await createBooking({
+      booking_date: selectedDate.toISOString().split('T')[0],
       price: priceInfo.basePrice,
-      cleaningFee: priceInfo.cleaningFee,
-      totalPrice: priceInfo.total,
+      cleaning_fee: priceInfo.cleaningFee,
+      total_price: priceInfo.total,
       status: 'pending',
-      checklistConfirmed,
-      termsAccepted,
+      checklist_confirmed: checklistConfirmed,
+      terms_accepted: termsAccepted,
     });
 
-    toast.success('Reserva solicitada com sucesso! Aguarde a confirmação.');
-    setSelectedDate(undefined);
-    setChecklistConfirmed(false);
-    setTermsAccepted(false);
-    setStep(1);
+    if (error) {
+      toast.error('Erro ao criar reserva. Tente novamente.');
+    } else {
+      toast.success('Reserva solicitada com sucesso! Aguarde a confirmação.');
+      setSelectedDate(undefined);
+      setChecklistConfirmed(false);
+      setTermsAccepted(false);
+    }
+
+    setLoading(false);
   };
 
   const isFormValid = selectedDate && checklistConfirmed && termsAccepted;
@@ -70,7 +71,7 @@ const NewReservation = () => {
       </div>
 
       {/* Loyalty Badge */}
-      {user && user.reservationCount >= LOYALTY_THRESHOLD && user.hasDiscount && (
+      {profile && profile.reservation_count >= LOYALTY_THRESHOLD && profile.has_discount && (
         <div className="flex items-center gap-3 bg-accent/10 border border-accent/30 rounded-xl p-4">
           <Sparkles className="w-6 h-6 text-accent" />
           <div>
@@ -128,7 +129,7 @@ const NewReservation = () => {
                     <span className="text-muted-foreground">Taxa de limpeza:</span>
                     <span>R$ {priceInfo.cleaningFee},00</span>
                   </div>
-                  {user?.hasDiscount && (
+                  {profile?.has_discount && (
                     <div className="flex justify-between text-accent">
                       <span>Desconto fidelidade (20%):</span>
                       <span>- R$ {Math.round((priceInfo.basePrice + priceInfo.cleaningFee) * 0.2)},00</span>
@@ -211,10 +212,10 @@ const NewReservation = () => {
             <Button
               className="w-full mt-6 bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-primary"
               size="lg"
-              disabled={!isFormValid}
+              disabled={!isFormValid || loading}
               onClick={handleSubmit}
             >
-              Solicitar Reserva
+              {loading ? 'Processando...' : 'Solicitar Reserva'}
             </Button>
           </CardContent>
         </Card>

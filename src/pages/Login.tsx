@@ -12,25 +12,20 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useApp();
+  const { signIn } = useApp();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    const success = login(email, password);
+    const { error } = await signIn(email, password);
     
-    if (success) {
-      toast.success('Login realizado com sucesso!');
-      // Check user role and redirect accordingly
-      const isAdmin = email === 'admin@ejeventos.com';
-      navigate(isAdmin ? '/admin' : '/dashboard');
+    if (error) {
+      toast.error(error.message || 'Erro ao fazer login. Verifique suas credenciais.');
     } else {
-      toast.error('Email ou senha incorretos. Tente: cliente@teste.com com qualquer senha de 6+ caracteres');
+      toast.success('Login realizado com sucesso!');
+      navigate('/dashboard');
     }
 
     setLoading(false);
@@ -105,13 +100,6 @@ const Login = () => {
               <Link to="/register" className="text-primary hover:underline font-medium">
                 Criar conta
               </Link>
-            </div>
-
-            <div className="mt-6 p-4 bg-muted rounded-lg">
-              <p className="text-xs text-muted-foreground text-center">
-                <strong>Demo:</strong> Use <code>admin@ejeventos.com</code> ou{' '}
-                <code>cliente@teste.com</code> com qualquer senha de 6+ caracteres
-              </p>
             </div>
           </CardContent>
         </Card>
