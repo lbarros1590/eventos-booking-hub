@@ -3,21 +3,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useVenueSettings } from '@/hooks/useVenueSettings';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Settings, Upload, DollarSign, Percent, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Settings, DollarSign, Percent, Loader2, FileText } from 'lucide-react';
+import GalleryManager from './GalleryManager';
 
 const AdminSettings = () => {
   const { settings, loading, updateSettings, refreshSettings } = useVenueSettings();
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   
   const [formData, setFormData] = useState({
     base_price_weekday: 400,
     base_price_weekend: 600,
     cleaning_fee: 70,
     global_discount_percent: 0,
+    payment_terms_text: '50% no ato da reserva, 50% na entrega das chaves.',
   });
 
   useEffect(() => {
@@ -27,20 +28,22 @@ const AdminSettings = () => {
         base_price_weekend: settings.base_price_weekend,
         cleaning_fee: settings.cleaning_fee,
         global_discount_percent: settings.global_discount_percent,
+        payment_terms_text: settings.payment_terms_text || '50% no ato da reserva, 50% na entrega das chaves.',
       });
     }
   }, [settings]);
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: parseFloat(value) || 0,
-    }));
+    if (field === 'payment_terms_text') {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    } else {
+      setFormData(prev => ({ ...prev, [field]: parseFloat(value) || 0 }));
+    }
   };
 
   const handleSave = async () => {
     setSaving(true);
-    const { error } = await updateSettings(formData);
+    const { error } = await updateSettings(formData as any);
     
     if (error) {
       toast.error('Erro ao salvar configurações');
@@ -48,46 +51,6 @@ const AdminSettings = () => {
       toast.success('Configurações salvas com sucesso!');
     }
     setSaving(false);
-  };
-
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      toast.error('Por favor, selecione uma imagem válida');
-      return;
-    }
-
-    setUploading(true);
-
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `hero-${Date.now()}.${fileExt}`;
-      const filePath = fileName;
-
-      const { error: uploadError } = await supabase.storage
-        .from('venue-images')
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('venue-images')
-        .getPublicUrl(filePath);
-
-      const { error: updateError } = await updateSettings({ hero_image_url: publicUrl });
-
-      if (updateError) throw updateError;
-
-      toast.success('Imagem do hero atualizada!');
-      await refreshSettings();
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast.error('Erro ao fazer upload da imagem');
-    }
-
-    setUploading(false);
   };
 
   if (loading) {
@@ -105,7 +68,7 @@ const AdminSettings = () => {
           Configurações
         </h1>
         <p className="text-muted-foreground mt-1">
-          Gerencie preços, taxas e imagens do espaço
+          Gerencie preços, taxas, galeria e termos
         </p>
       </div>
 
@@ -212,58 +175,31 @@ const AdminSettings = () => {
           </CardContent>
         </Card>
 
-        {/* Hero Image */}
-        <Card className="lg:col-span-2">
+        {/* Payment Terms */}
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <ImageIcon className="w-5 h-5 text-primary" />
-              Imagem Principal (Hero)
+              <FileText className="w-5 h-5 text-primary" />
+              Termos de Pagamento
             </CardTitle>
             <CardDescription>
-              Imagem exibida no topo da página inicial
+              Texto exibido no contrato e na reserva
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col md:flex-row gap-6">
-              {settings?.hero_image_url && (
-                <div className="flex-shrink-0">
-                  <img
-                    src={settings.hero_image_url}
-                    alt="Hero image preview"
-                    className="w-full md:w-64 h-40 object-cover rounded-lg border border-border"
-                  />
-                </div>
-              )}
-              <div className="flex-1 space-y-4">
-                <div>
-                  <Label htmlFor="hero-upload" className="cursor-pointer">
-                    <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors">
-                      {uploading ? (
-                        <Loader2 className="w-8 h-8 mx-auto text-primary animate-spin" />
-                      ) : (
-                        <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                      )}
-                      <p className="text-sm text-muted-foreground">
-                        {uploading ? 'Enviando...' : 'Clique para fazer upload de uma nova imagem'}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        PNG, JPG ou WEBP (recomendado: 1920x1080)
-                      </p>
-                    </div>
-                    <Input
-                      id="hero-upload"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                      disabled={uploading}
-                    />
-                  </Label>
-                </div>
-              </div>
-            </div>
+            <Textarea
+              value={formData.payment_terms_text}
+              onChange={(e) => handleInputChange('payment_terms_text', e.target.value)}
+              placeholder="Ex: 50% no ato da reserva, 50% na entrega das chaves."
+              rows={3}
+            />
           </CardContent>
         </Card>
+
+        {/* Gallery Manager - Full width */}
+        <div className="lg:col-span-2">
+          <GalleryManager />
+        </div>
       </div>
 
       <div className="flex justify-end">

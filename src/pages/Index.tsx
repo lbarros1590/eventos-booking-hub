@@ -1,7 +1,7 @@
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import WhatsAppFAB from '@/components/WhatsAppFAB';
-import HeroSection from '@/components/landing/HeroSection';
+import HeroGallery from '@/components/landing/HeroGallery';
 import AmenitiesSection from '@/components/landing/AmenitiesSection';
 import AvailabilityCalendar from '@/components/landing/AvailabilityCalendar';
 import PricingSection from '@/components/landing/PricingSection';
@@ -12,7 +12,7 @@ const Index = () => {
     <div className="min-h-screen">
       <Header />
       <main>
-        <HeroSection />
+        <HeroGallery />
         <AvailabilityCalendar />
         <AmenitiesSection />
         <PricingSection />
