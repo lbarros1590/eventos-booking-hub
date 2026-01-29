@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useApp, Expense } from '@/contexts/AppContext';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import {
@@ -22,52 +22,62 @@ import {
 } from 'lucide-react';
 
 const AdminFinancial = () => {
-  const { bookings, expenses, addExpense, deleteExpense } = useApp();
+  const { bookings, expenses, profiles, addExpense, deleteExpense } = useApp();
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState<Expense['category']>('other');
+  const [loading, setLoading] = useState(false);
 
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
 
   // Filter data for current month
   const monthlyBookings = bookings.filter((b) => {
-    const bookingMonth = b.date.getMonth();
-    const bookingYear = b.date.getFullYear();
+    const bookingDate = parseISO(b.booking_date);
+    const bookingMonth = bookingDate.getMonth();
+    const bookingYear = bookingDate.getFullYear();
     return bookingMonth === currentMonth && bookingYear === currentYear && b.status !== 'cancelled';
   });
 
   const monthlyExpenses = expenses.filter((e) => {
-    const expenseMonth = e.date.getMonth();
-    const expenseYear = e.date.getFullYear();
+    const expenseDate = parseISO(e.expense_date);
+    const expenseMonth = expenseDate.getMonth();
+    const expenseYear = expenseDate.getFullYear();
     return expenseMonth === currentMonth && expenseYear === currentYear;
   });
 
-  const totalIncome = monthlyBookings.reduce((sum, b) => sum + b.totalPrice, 0);
-  const totalExpenses = monthlyExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalIncome = monthlyBookings.reduce((sum, b) => sum + Number(b.total_price), 0);
+  const totalExpenses = monthlyExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
   const profit = totalIncome - totalExpenses;
 
-  const handleAddExpense = () => {
+  const getUserName = (userId: string) => {
+    const profile = profiles.find(p => p.user_id === userId);
+    return profile?.name || 'Cliente';
+  };
+
+  const handleAddExpense = async () => {
     if (!description || !amount) {
       toast.error('Preencha todos os campos');
       return;
     }
 
-    addExpense({
+    setLoading(true);
+    await addExpense({
       description,
       amount: parseFloat(amount),
       category,
-      date: new Date(),
+      expense_date: new Date().toISOString().split('T')[0],
     });
 
     toast.success('Despesa adicionada com sucesso');
     setDescription('');
     setAmount('');
     setCategory('other');
+    setLoading(false);
   };
 
-  const handleDeleteExpense = (id: string) => {
-    deleteExpense(id);
+  const handleDeleteExpense = async (id: string) => {
+    await deleteExpense(id);
     toast.success('Despesa removida');
   };
 
@@ -205,9 +215,10 @@ const AdminFinancial = () => {
             <Button
               onClick={handleAddExpense}
               className="w-full bg-gradient-accent hover:opacity-90 text-accent-foreground"
+              disabled={loading}
             >
               <Plus className="mr-2" size={20} />
-              Adicionar Despesa
+              {loading ? 'Adicionando...' : 'Adicionar Despesa'}
             </Button>
           </CardContent>
         </Card>
@@ -231,13 +242,13 @@ const AdminFinancial = () => {
                     className="flex items-center justify-between p-3 bg-success/5 rounded-lg"
                   >
                     <div>
-                      <p className="font-medium text-foreground text-sm">{booking.userName}</p>
+                      <p className="font-medium text-foreground text-sm">{getUserName(booking.user_id)}</p>
                       <p className="text-xs text-muted-foreground">
-                        {format(booking.date, 'dd/MM/yyyy')}
+                        {format(parseISO(booking.booking_date), 'dd/MM/yyyy')}
                       </p>
                     </div>
                     <span className="font-semibold text-success">
-                      +R$ {booking.totalPrice}
+                      +R$ {Number(booking.total_price).toFixed(0)}
                     </span>
                   </div>
                 ))}
@@ -279,9 +290,9 @@ const AdminFinancial = () => {
                         <span>{getCategoryLabel(expense.category)}</span>
                       </div>
                     </TableCell>
-                    <TableCell>{format(expense.date, 'dd/MM/yyyy')}</TableCell>
+                    <TableCell>{format(parseISO(expense.expense_date), 'dd/MM/yyyy')}</TableCell>
                     <TableCell className="text-right font-semibold text-destructive">
-                      -R$ {expense.amount.toLocaleString('pt-BR')}
+                      -R$ {Number(expense.amount).toLocaleString('pt-BR')}
                     </TableCell>
                     <TableCell>
                       <Button

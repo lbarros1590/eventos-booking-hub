@@ -1,13 +1,18 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { BUSINESS_INFO } from '@/lib/constants';
-import { Menu, X, Instagram, Phone, MapPin } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, logout } = useApp();
+  const { user, role, signOut } = useApp();
+
+  const handleSignOut = async () => {
+    await signOut();
+    setIsMenuOpen(false);
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border">
@@ -43,12 +48,12 @@ const Header = () => {
           <div className="hidden md:flex items-center gap-3">
             {user ? (
               <>
-                <Link to={user.role === 'admin' ? '/admin' : '/dashboard'}>
+                <Link to={role === 'admin' ? '/admin' : '/dashboard'}>
                   <Button variant="ghost" size="sm">
                     Painel
                   </Button>
                 </Link>
-                <Button variant="outline" size="sm" onClick={logout}>
+                <Button variant="outline" size="sm" onClick={handleSignOut}>
                   Sair
                 </Button>
               </>
@@ -112,12 +117,12 @@ const Header = () => {
               <div className="flex gap-2 px-4 pt-3 border-t border-border mt-2">
                 {user ? (
                   <>
-                    <Link to={user.role === 'admin' ? '/admin' : '/dashboard'} className="flex-1">
+                    <Link to={role === 'admin' ? '/admin' : '/dashboard'} className="flex-1">
                       <Button variant="outline" className="w-full" size="sm">
                         Painel
                       </Button>
                     </Link>
-                    <Button variant="ghost" size="sm" onClick={logout} className="flex-1">
+                    <Button variant="ghost" size="sm" onClick={handleSignOut} className="flex-1">
                       Sair
                     </Button>
                   </>

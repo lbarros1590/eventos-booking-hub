@@ -1,7 +1,7 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useApp } from '@/contexts/AppContext';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarDays, Clock, DollarSign } from 'lucide-react';
 
@@ -9,8 +9,8 @@ const MyReservations = () => {
   const { user, bookings } = useApp();
 
   const userBookings = bookings
-    .filter((b) => b.userId === user?.id)
-    .sort((a, b) => b.date.getTime() - a.date.getTime());
+    .filter((b) => b.user_id === user?.id)
+    .sort((a, b) => new Date(b.booking_date).getTime() - new Date(a.booking_date).getTime());
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -27,7 +27,8 @@ const MyReservations = () => {
     }
   };
 
-  const isPastDate = (date: Date) => {
+  const isPastDate = (dateStr: string) => {
+    const date = parseISO(dateStr);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return date < today;
@@ -57,7 +58,7 @@ const MyReservations = () => {
       ) : (
         <div className="space-y-4">
           {userBookings.map((booking) => (
-            <Card key={booking.id} className={isPastDate(booking.date) ? 'opacity-70' : ''}>
+            <Card key={booking.id} className={isPastDate(booking.booking_date) ? 'opacity-70' : ''}>
               <CardContent className="p-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex items-start gap-4">
@@ -67,12 +68,12 @@ const MyReservations = () => {
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-semibold text-foreground">
-                          {format(booking.date, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                          {format(parseISO(booking.booking_date), "EEEE, dd 'de' MMMM", { locale: ptBR })}
                         </h3>
                         {getStatusBadge(booking.status)}
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        Reserva #{booking.id} • Criada em {format(booking.createdAt, 'dd/MM/yyyy')}
+                        Reserva • Criada em {format(parseISO(booking.created_at), 'dd/MM/yyyy')}
                       </p>
                     </div>
                   </div>
@@ -85,7 +86,7 @@ const MyReservations = () => {
                     <div className="flex items-center gap-2">
                       <DollarSign className="w-4 h-4 text-primary" />
                       <span className="font-semibold text-foreground">
-                        R$ {booking.totalPrice},00
+                        R$ {Number(booking.total_price).toFixed(0)},00
                       </span>
                     </div>
                   </div>
