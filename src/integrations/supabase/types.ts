@@ -22,9 +22,11 @@ export type Database = {
           created_at: string
           custom_checklist_items: Json | null
           deposit_paid: boolean
+          discount_applied: number | null
           final_balance_paid: boolean
           id: string
           manual_price_override: number | null
+          origin: string | null
           price: number
           status: string
           terms_accepted: boolean
@@ -40,9 +42,11 @@ export type Database = {
           created_at?: string
           custom_checklist_items?: Json | null
           deposit_paid?: boolean
+          discount_applied?: number | null
           final_balance_paid?: boolean
           id?: string
           manual_price_override?: number | null
+          origin?: string | null
           price: number
           status?: string
           terms_accepted?: boolean
@@ -58,9 +62,11 @@ export type Database = {
           created_at?: string
           custom_checklist_items?: Json | null
           deposit_paid?: boolean
+          discount_applied?: number | null
           final_balance_paid?: boolean
           id?: string
           manual_price_override?: number | null
+          origin?: string | null
           price?: number
           status?: string
           terms_accepted?: boolean
@@ -106,6 +112,7 @@ export type Database = {
           description: string
           expense_date: string
           id: string
+          payment_date: string | null
         }
         Insert: {
           amount: number
@@ -114,6 +121,7 @@ export type Database = {
           description: string
           expense_date?: string
           id?: string
+          payment_date?: string | null
         }
         Update: {
           amount?: number
@@ -122,14 +130,17 @@ export type Database = {
           description?: string
           expense_date?: string
           id?: string
+          payment_date?: string | null
         }
         Relationships: []
       }
       profiles: {
         Row: {
+          birth_date: string | null
           created_at: string
           has_discount: boolean
           id: string
+          loyalty_points: number
           name: string
           phone: string | null
           reservation_count: number
@@ -137,9 +148,11 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          birth_date?: string | null
           created_at?: string
           has_discount?: boolean
           id?: string
+          loyalty_points?: number
           name: string
           phone?: string | null
           reservation_count?: number
@@ -147,9 +160,11 @@ export type Database = {
           user_id: string
         }
         Update: {
+          birth_date?: string | null
           created_at?: string
           has_discount?: boolean
           id?: string
+          loyalty_points?: number
           name?: string
           phone?: string | null
           reservation_count?: number

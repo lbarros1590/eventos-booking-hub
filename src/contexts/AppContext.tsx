@@ -11,6 +11,8 @@ export interface Profile {
   phone: string | null;
   reservation_count: number;
   has_discount: boolean;
+  birth_date: string | null;
+  loyalty_points: number;
 }
 
 export interface Booking {
@@ -24,11 +26,13 @@ export interface Booking {
   checklist_confirmed: boolean;
   terms_accepted: boolean;
   created_at: string;
-  deposit_paid?: boolean;
-  final_balance_paid?: boolean;
-  manual_price_override?: number | null;
-  waive_cleaning_fee?: boolean;
-  custom_checklist_items?: any[] | null;
+  deposit_paid: boolean;
+  final_balance_paid: boolean;
+  manual_price_override: number | null;
+  waive_cleaning_fee: boolean;
+  custom_checklist_items: any[] | null;
+  discount_applied: number;
+  origin: 'web' | 'admin_manual';
 }
 
 export interface Expense {
@@ -37,6 +41,24 @@ export interface Expense {
   amount: number;
   category: 'electricity' | 'water' | 'maintenance' | 'other';
   expense_date: string;
+  payment_date: string | null;
+}
+
+interface ManualClientData {
+  name: string;
+  phone: string;
+  birth_date: string | null;
+}
+
+interface ManualBookingData {
+  user_id: string;
+  booking_date: string;
+  price: number;
+  cleaning_fee: number;
+  total_price: number;
+  status: 'pending' | 'confirmed';
+  deposit_paid: boolean;
+  origin: 'admin_manual';
 }
 
 interface AppContextType {
@@ -49,16 +71,19 @@ interface AppContextType {
   expenses: Expense[];
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, name: string, phone: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, name: string, phone: string, birthDate?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   createBooking: (booking: Omit<Booking, 'id' | 'created_at' | 'user_id'>) => Promise<{ error: Error | null }>;
   updateBookingStatus: (bookingId: string, status: Booking['status']) => Promise<void>;
   addExpense: (expense: Omit<Expense, 'id'>) => Promise<void>;
+  updateExpense: (id: string, expense: Partial<Omit<Expense, 'id'>>) => Promise<void>;
   deleteExpense: (expenseId: string) => Promise<void>;
   grantDiscount: (userId: string) => Promise<void>;
   isDateBooked: (date: Date) => boolean;
   calculatePrice: (date: Date) => { basePrice: number; cleaningFee: number; total: number };
   refreshData: () => Promise<void>;
+  createManualClient: (data: ManualClientData) => Promise<{ error: Error | null; profile: Profile | null }>;
+  createManualBooking: (data: ManualBookingData) => Promise<{ error: Error | null }>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -184,7 +209,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return { error };
   };
 
-  const signUp = async (email: string, password: string, name: string, phone: string) => {
+  const signUp = async (email: string, password: string, name: string, phone: string, birthDate?: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
     const { error } = await supabase.auth.signUp({
@@ -195,6 +220,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         data: {
           name,
           phone,
+          birth_date: birthDate || null,
         },
       },
     });
@@ -223,6 +249,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         status: booking.status,
         checklist_confirmed: booking.checklist_confirmed,
         terms_accepted: booking.terms_accepted,
+        deposit_paid: booking.deposit_paid || false,
+        final_balance_paid: booking.final_balance_paid || false,
+        discount_applied: booking.discount_applied || 0,
+        origin: booking.origin || 'web',
       });
 
     if (!error) {
@@ -257,7 +287,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         amount: expense.amount,
         category: expense.category,
         expense_date: expense.expense_date,
+        payment_date: expense.payment_date,
       });
+    
+    await refreshData();
+  };
+
+  const updateExpense = async (id: string, expense: Partial<Omit<Expense, 'id'>>) => {
+    await supabase
+      .from('expenses')
+      .update(expense)
+      .eq('id', id);
     
     await refreshData();
   };
@@ -307,6 +347,62 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return { basePrice, cleaningFee, total };
   };
 
+  const createManualClient = async (data: ManualClientData): Promise<{ error: Error | null; profile: Profile | null }> => {
+    // Create a pseudo user_id for manual clients (they don't have auth accounts)
+    const pseudoUserId = crypto.randomUUID();
+    
+    const { data: profileData, error } = await supabase
+      .from('profiles')
+      .insert({
+        user_id: pseudoUserId,
+        name: data.name,
+        phone: data.phone,
+        birth_date: data.birth_date,
+        reservation_count: 0,
+        has_discount: false,
+        loyalty_points: 0,
+      })
+      .select()
+      .single();
+    
+    if (!error) {
+      await refreshData();
+    }
+    
+    return { error, profile: profileData as Profile | null };
+  };
+
+  const createManualBooking = async (data: ManualBookingData): Promise<{ error: Error | null }> => {
+    const { error } = await supabase
+      .from('bookings')
+      .insert({
+        user_id: data.user_id,
+        booking_date: data.booking_date,
+        price: data.price,
+        cleaning_fee: data.cleaning_fee,
+        total_price: data.total_price,
+        status: data.status,
+        deposit_paid: data.deposit_paid,
+        origin: data.origin,
+        checklist_confirmed: true,
+        terms_accepted: true,
+      });
+    
+    if (!error) {
+      // Increment reservation count for the user
+      const targetProfile = profiles.find(p => p.user_id === data.user_id);
+      if (targetProfile) {
+        await supabase
+          .from('profiles')
+          .update({ reservation_count: targetProfile.reservation_count + 1 })
+          .eq('user_id', data.user_id);
+      }
+      await refreshData();
+    }
+    
+    return { error };
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -324,11 +420,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         createBooking,
         updateBookingStatus,
         addExpense,
+        updateExpense,
         deleteExpense,
         grantDiscount,
         isDateBooked,
         calculatePrice,
         refreshData,
+        createManualClient,
+        createManualBooking,
       }}
     >
       {children}

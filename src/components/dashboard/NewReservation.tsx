@@ -54,6 +54,13 @@ const NewReservation = () => {
       status: 'pending',
       checklist_confirmed: checklistConfirmed,
       terms_accepted: termsAccepted,
+      deposit_paid: false,
+      final_balance_paid: false,
+      manual_price_override: null,
+      waive_cleaning_fee: false,
+      custom_checklist_items: null,
+      discount_applied: profile?.has_discount ? Math.round((priceInfo.basePrice + priceInfo.cleaningFee) * 0.2) : 0,
+      origin: 'web',
     });
 
     if (error) {

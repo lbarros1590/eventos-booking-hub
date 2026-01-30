@@ -406,6 +406,16 @@ const BookingDetailsModal = ({
                 </span>
               </div>
 
+              {/* Show discount applied if any */}
+              {booking.discount_applied && Number(booking.discount_applied) > 0 && (
+                <div className="flex justify-between text-sm text-accent">
+                  <span className="flex items-center gap-1">
+                    🎁 Desconto Fidelidade
+                  </span>
+                  <span>- R$ {Number(booking.discount_applied).toFixed(0)},00</span>
+                </div>
+              )}
+
               <div className="space-y-2 pt-2 border-t border-border">
                 <Label htmlFor="override" className="text-sm flex items-center gap-2">
                   <Edit2 className="w-4 h-4" />
