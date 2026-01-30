@@ -37,6 +37,7 @@ const ManualReservationModal = ({
   const [showNewClient, setShowNewClient] = useState(false);
   const [newClientName, setNewClientName] = useState('');
   const [newClientPhone, setNewClientPhone] = useState('');
+  const [newClientBirthDate, setNewClientBirthDate] = useState('');
 
   const priceInfo = selectedDate ? calculatePriceForDate(selectedDate, false) : null;
 
@@ -56,7 +57,7 @@ const ManualReservationModal = ({
     const result = await createManualClient({
       name: newClientName,
       phone: newClientPhone,
-      birth_date: null,
+      birth_date: newClientBirthDate || null,
     });
 
     if (result.error) {
@@ -67,6 +68,7 @@ const ManualReservationModal = ({
       setShowNewClient(false);
       setNewClientName('');
       setNewClientPhone('');
+      setNewClientBirthDate('');
     }
     setLoading(false);
   };
@@ -167,6 +169,13 @@ const ManualReservationModal = ({
                   placeholder="Telefone"
                   value={newClientPhone}
                   onChange={(e) => setNewClientPhone(e.target.value)}
+                />
+                <Input
+                  type="date"
+                  placeholder="Data de Nascimento"
+                  value={newClientBirthDate}
+                  onChange={(e) => setNewClientBirthDate(e.target.value)}
+                  max={new Date().toISOString().split('T')[0]}
                 />
                 <div className="flex gap-2">
                   <Button
