@@ -6,17 +6,25 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useApp } from '@/contexts/AppContext';
 import { toast } from 'sonner';
-import { ArrowLeft, UserPlus } from 'lucide-react';
+import { ArrowLeft, UserPlus, AlertCircle } from 'lucide-react';
+import { differenceInYears, parseISO } from 'date-fns';
 
 const Register = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [birthDate, setBirthDate] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { signUp } = useApp();
   const navigate = useNavigate();
+
+  const calculateAge = (dateString: string): number => {
+    if (!dateString) return 0;
+    const date = parseISO(dateString);
+    return differenceInYears(new Date(), date);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,9 +39,20 @@ const Register = () => {
       return;
     }
 
+    if (!birthDate) {
+      toast.error('Por favor, informe sua data de nascimento');
+      return;
+    }
+
+    const age = calculateAge(birthDate);
+    if (age < 18) {
+      toast.error('Você deve ter pelo menos 18 anos para se cadastrar');
+      return;
+    }
+
     setLoading(true);
 
-    const { error } = await signUp(email, password, name, phone);
+    const { error } = await signUp(email, password, name, phone, birthDate);
     
     if (error) {
       if (error.message.includes('already registered')) {
@@ -48,6 +67,9 @@ const Register = () => {
 
     setLoading(false);
   };
+
+  const age = birthDate ? calculateAge(birthDate) : null;
+  const isMinor = age !== null && age < 18;
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 py-12">
@@ -106,6 +128,23 @@ const Register = () => {
                 />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="birthDate">Data de Nascimento</Label>
+                <Input
+                  id="birthDate"
+                  type="date"
+                  value={birthDate}
+                  onChange={(e) => setBirthDate(e.target.value)}
+                  required
+                  max={new Date().toISOString().split('T')[0]}
+                />
+                {isMinor && (
+                  <div className="flex items-center gap-2 text-destructive text-sm mt-1">
+                    <AlertCircle className="w-4 h-4" />
+                    <span>Você deve ter pelo menos 18 anos para se cadastrar</span>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="password">Senha</Label>
                 <Input
                   id="password"
@@ -134,7 +173,7 @@ const Register = () => {
                 type="submit"
                 className="w-full bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-primary"
                 size="lg"
-                disabled={loading}
+                disabled={loading || isMinor}
               >
                 {loading ? (
                   'Criando conta...'

@@ -11,9 +11,10 @@ import { useApp, Booking } from '@/contexts/AppContext';
 import { useVenueSettings, CalendarException } from '@/hooks/useVenueSettings';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarDays, Loader2, Plus, Trash2 } from 'lucide-react';
+import { CalendarDays, Loader2, Plus, Trash2, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import BookingDetailsModal from './BookingDetailsModal';
+import ManualReservationModal from './ManualReservationModal';
 
 const AdminCalendar = () => {
   const { bookings, profiles, updateBookingStatus, refreshData } = useApp();
@@ -21,6 +22,7 @@ const AdminCalendar = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [exceptionModalOpen, setExceptionModalOpen] = useState(false);
+  const [manualReservationModalOpen, setManualReservationModalOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   
   // Exception form state
@@ -236,13 +238,23 @@ const AdminCalendar = () => {
             </Button>
 
             {selectedDate && !bookings.find(b => b.booking_date === selectedDate.toISOString().split('T')[0] && b.status !== 'cancelled') && (
-              <div className="text-center py-4">
-                <CalendarDays className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-                <p className="text-muted-foreground">Data disponível</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Nenhuma reserva para este dia
-                </p>
-              </div>
+              <>
+                <Button
+                  onClick={() => setManualReservationModalOpen(true)}
+                  className="w-full bg-gradient-primary hover:opacity-90"
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Nova Reserva Manual
+                </Button>
+
+                <div className="text-center py-4">
+                  <CalendarDays className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="text-muted-foreground">Data disponível</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Nenhuma reserva para este dia
+                  </p>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
@@ -303,6 +315,14 @@ const AdminCalendar = () => {
         profile={getSelectedBookingProfile()}
         onStatusChange={handleStatusChange}
         onRefresh={refreshData}
+      />
+
+      {/* Manual Reservation Modal */}
+      <ManualReservationModal
+        open={manualReservationModalOpen}
+        onOpenChange={setManualReservationModalOpen}
+        selectedDate={selectedDate || null}
+        onSuccess={refreshData}
       />
 
       {/* Exception Modal */}
