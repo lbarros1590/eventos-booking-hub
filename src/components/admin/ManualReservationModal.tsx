@@ -38,6 +38,7 @@ const ManualReservationModal = ({
   const [newClientName, setNewClientName] = useState('');
   const [newClientPhone, setNewClientPhone] = useState('');
   const [newClientBirthDate, setNewClientBirthDate] = useState('');
+  const [newClientEmail, setNewClientEmail] = useState('');
 
   const priceInfo = selectedDate ? calculatePriceForDate(selectedDate, false) : null;
 
@@ -58,6 +59,7 @@ const ManualReservationModal = ({
       name: newClientName,
       phone: newClientPhone,
       birth_date: newClientBirthDate || null,
+      email: newClientEmail || null,
     });
 
     if (result.error) {
@@ -69,6 +71,7 @@ const ManualReservationModal = ({
       setNewClientName('');
       setNewClientPhone('');
       setNewClientBirthDate('');
+      setNewClientEmail('');
     }
     setLoading(false);
   };
@@ -176,6 +179,12 @@ const ManualReservationModal = ({
                   value={newClientBirthDate}
                   onChange={(e) => setNewClientBirthDate(e.target.value)}
                   max={new Date().toISOString().split('T')[0]}
+                />
+                <Input
+                  type="email"
+                  placeholder="Email (opcional)"
+                  value={newClientEmail}
+                  onChange={(e) => setNewClientEmail(e.target.value)}
                 />
                 <div className="flex gap-2">
                   <Button

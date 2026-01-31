@@ -19,6 +19,7 @@ const AdminClients = () => {
   const [newClientName, setNewClientName] = useState('');
   const [newClientPhone, setNewClientPhone] = useState('');
   const [newClientBirthDate, setNewClientBirthDate] = useState('');
+  const [newClientEmail, setNewClientEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleGrantDiscount = async (userId: string, userName: string) => {
@@ -61,6 +62,7 @@ const AdminClients = () => {
       name: newClientName,
       phone: newClientPhone,
       birth_date: newClientBirthDate || null,
+      email: newClientEmail || null,
     });
 
     if (result.error) {
@@ -71,6 +73,7 @@ const AdminClients = () => {
       setNewClientName('');
       setNewClientPhone('');
       setNewClientBirthDate('');
+      setNewClientEmail('');
     }
     setLoading(false);
   };
@@ -325,6 +328,17 @@ const AdminClients = () => {
                 value={newClientBirthDate}
                 onChange={(e) => setNewClientBirthDate(e.target.value)}
                 max={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="clientEmail">Email</Label>
+              <Input
+                id="clientEmail"
+                type="email"
+                placeholder="email@exemplo.com"
+                value={newClientEmail}
+                onChange={(e) => setNewClientEmail(e.target.value)}
               />
             </div>
 

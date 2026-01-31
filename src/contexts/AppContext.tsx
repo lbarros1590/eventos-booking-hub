@@ -48,6 +48,7 @@ interface ManualClientData {
   name: string;
   phone: string;
   birth_date: string | null;
+  email?: string | null;
 }
 
 interface ManualBookingData {
@@ -358,6 +359,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         name: data.name,
         phone: data.phone,
         birth_date: data.birth_date,
+        email: data.email || null,
         reservation_count: 0,
         has_discount: false,
         loyalty_points: 0,
