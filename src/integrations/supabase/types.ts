@@ -138,6 +138,7 @@ export type Database = {
         Row: {
           birth_date: string | null
           created_at: string
+          email: string | null
           has_discount: boolean
           id: string
           loyalty_points: number
@@ -150,6 +151,7 @@ export type Database = {
         Insert: {
           birth_date?: string | null
           created_at?: string
+          email?: string | null
           has_discount?: boolean
           id?: string
           loyalty_points?: number
@@ -162,6 +164,7 @@ export type Database = {
         Update: {
           birth_date?: string | null
           created_at?: string
+          email?: string | null
           has_discount?: boolean
           id?: string
           loyalty_points?: number
