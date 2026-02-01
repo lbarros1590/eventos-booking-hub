@@ -6,10 +6,10 @@ import { ptBR } from 'date-fns/locale';
 import { CalendarDays, Clock, DollarSign } from 'lucide-react';
 
 const MyReservations = () => {
-  const { user, bookings } = useApp();
+  const { user, profile, bookings } = useApp();
 
   const userBookings = bookings
-    .filter((b) => b.user_id === user?.id)
+    .filter((b) => b.user_id === user?.id || b.profile_id === profile?.id)
     .sort((a, b) => new Date(b.booking_date).getTime() - new Date(a.booking_date).getTime());
 
   const getStatusBadge = (status: string) => {

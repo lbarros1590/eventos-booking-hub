@@ -27,7 +27,9 @@ export type Database = {
           id: string
           manual_price_override: number | null
           origin: string | null
+          payment_method: string | null
           price: number
+          profile_id: string | null
           status: string
           terms_accepted: boolean
           total_price: number
@@ -47,7 +49,9 @@ export type Database = {
           id?: string
           manual_price_override?: number | null
           origin?: string | null
+          payment_method?: string | null
           price: number
+          profile_id?: string | null
           status?: string
           terms_accepted?: boolean
           total_price: number
@@ -67,7 +71,9 @@ export type Database = {
           id?: string
           manual_price_override?: number | null
           origin?: string | null
+          payment_method?: string | null
           price?: number
+          profile_id?: string | null
           status?: string
           terms_accepted?: boolean
           total_price?: number
@@ -75,7 +81,15 @@ export type Database = {
           user_id?: string
           waive_cleaning_fee?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bookings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       calendar_exceptions: {
         Row: {
@@ -146,7 +160,7 @@ export type Database = {
           phone: string | null
           reservation_count: number
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           birth_date?: string | null
@@ -159,7 +173,7 @@ export type Database = {
           phone?: string | null
           reservation_count?: number
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           birth_date?: string | null
@@ -172,7 +186,7 @@ export type Database = {
           phone?: string | null
           reservation_count?: number
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }

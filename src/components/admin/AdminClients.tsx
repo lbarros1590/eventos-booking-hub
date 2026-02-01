@@ -8,9 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useApp } from '@/contexts/AppContext';
 import { toast } from 'sonner';
-import { Users, Phone, Gift, Award, Cake, Plus, MessageCircle, Calendar } from 'lucide-react';
+import { Users, Phone, Gift, Award, Cake, Plus, MessageCircle, Calendar, Mail, User } from 'lucide-react';
 import { LOYALTY_THRESHOLD, BUSINESS_INFO } from '@/lib/constants';
-import { format, parseISO, isToday, differenceInYears } from 'date-fns';
+import { format, parseISO, differenceInYears } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const AdminClients = () => {
@@ -21,14 +21,15 @@ const AdminClients = () => {
   const [newClientBirthDate, setNewClientBirthDate] = useState('');
   const [newClientEmail, setNewClientEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const handleGrantDiscount = async (userId: string, userName: string) => {
-    await grantDiscount(userId);
-    toast.success(`Desconto concedido para ${userName}`);
+  const handleGrantDiscount = async (profileId: string, profileName: string) => {
+    await grantDiscount(profileId);
+    toast.success(`Desconto concedido para ${profileName}`);
   };
 
-  const getBookingCount = (userId: string) => {
-    return bookings.filter(b => b.user_id === userId && b.status !== 'cancelled').length;
+  const getBookingCount = (profileId: string) => {
+    return bookings.filter(b => b.profile_id === profileId && b.status !== 'cancelled').length;
   };
 
   const isBirthday = (birthDate: string | null) => {
@@ -57,6 +58,13 @@ const AdminClients = () => {
       return;
     }
 
+    // Check if phone already exists
+    const phoneExists = profiles.some(p => p.phone === newClientPhone);
+    if (phoneExists) {
+      toast.error('Já existe um cliente com este telefone');
+      return;
+    }
+
     setLoading(true);
     const result = await createManualClient({
       name: newClientName,
@@ -66,7 +74,7 @@ const AdminClients = () => {
     });
 
     if (result.error) {
-      toast.error('Erro ao adicionar cliente');
+      toast.error('Erro ao adicionar cliente: ' + result.error.message);
     } else {
       toast.success('Cliente adicionado com sucesso!');
       setAddClientModalOpen(false);
@@ -78,8 +86,18 @@ const AdminClients = () => {
     setLoading(false);
   };
 
+  // Filter profiles by search
+  const filteredProfiles = profiles.filter(p => {
+    const query = searchQuery.toLowerCase();
+    return (
+      p.name.toLowerCase().includes(query) ||
+      (p.phone && p.phone.includes(query)) ||
+      (p.email && p.email.toLowerCase().includes(query))
+    );
+  });
+
   // Sort profiles with birthday people first
-  const sortedProfiles = [...profiles].sort((a, b) => {
+  const sortedProfiles = [...filteredProfiles].sort((a, b) => {
     const aIsBirthday = isBirthday(a.birth_date);
     const bIsBirthday = isBirthday(b.birth_date);
     if (aIsBirthday && !bIsBirthday) return -1;
@@ -88,6 +106,7 @@ const AdminClients = () => {
   });
 
   const birthdayCount = profiles.filter(p => isBirthday(p.birth_date)).length;
+  const manualClientsCount = profiles.filter(p => p.user_id === null).length;
 
   return (
     <div className="space-y-6">
@@ -110,7 +129,7 @@ const AdminClients = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid sm:grid-cols-4 gap-4">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
@@ -120,6 +139,20 @@ const AdminClients = () => {
               </div>
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
                 <Users className="w-6 h-6 text-primary" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Clientes Manuais</p>
+                <p className="text-2xl font-bold text-foreground mt-1">{manualClientsCount}</p>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
+                <User className="w-6 h-6 text-muted-foreground" />
               </div>
             </div>
           </CardContent>
@@ -172,11 +205,25 @@ const AdminClients = () => {
         </Card>
       </div>
 
+      {/* Search */}
+      <Card>
+        <CardContent className="p-4">
+          <Input
+            placeholder="Buscar por nome, telefone ou email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="max-w-md"
+          />
+        </CardContent>
+      </Card>
+
       {/* Clients Table */}
       <Card>
         <CardHeader>
           <CardTitle>Lista de Clientes</CardTitle>
-          <CardDescription>Todos os clientes cadastrados na plataforma</CardDescription>
+          <CardDescription>
+            Todos os clientes cadastrados ({sortedProfiles.length} de {profiles.length})
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {profiles.length === 0 ? (
@@ -189,9 +236,10 @@ const AdminClients = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Cliente</TableHead>
-                  <TableHead>Telefone</TableHead>
+                  <TableHead>Contato</TableHead>
                   <TableHead>Data Nasc.</TableHead>
-                  <TableHead>Total Reservas</TableHead>
+                  <TableHead>Reservas</TableHead>
+                  <TableHead>Tipo</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -200,7 +248,8 @@ const AdminClients = () => {
                 {sortedProfiles.map((client) => {
                   const isClientBirthday = isBirthday(client.birth_date);
                   const age = calculateAge(client.birth_date);
-                  const totalBookings = getBookingCount(client.user_id);
+                  const totalBookings = getBookingCount(client.id);
+                  const isManualClient = client.user_id === null;
                   
                   return (
                     <TableRow key={client.id} className={isClientBirthday ? 'bg-warning/5' : ''}>
@@ -218,14 +267,27 @@ const AdminClients = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Phone className="w-4 h-4" />
-                          <span>{client.phone || '-'}</span>
+                        <div className="space-y-1">
+                          {client.phone && (
+                            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                              <Phone className="w-3 h-3" />
+                              <span>{client.phone}</span>
+                            </div>
+                          )}
+                          {client.email && (
+                            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                              <Mail className="w-3 h-3" />
+                              <span>{client.email}</span>
+                            </div>
+                          )}
+                          {!client.phone && !client.email && (
+                            <span className="text-muted-foreground text-sm">-</span>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
                         {client.birth_date 
-                          ? format(parseISO(client.birth_date), 'dd/MM/yyyy')
+                          ? format(parseISO(client.birth_date), 'dd/MM/yyyy', { locale: ptBR })
                           : '-'
                         }
                       </TableCell>
@@ -237,6 +299,17 @@ const AdminClients = () => {
                             / {LOYALTY_THRESHOLD}
                           </span>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {isManualClient ? (
+                          <Badge variant="outline" className="bg-secondary text-muted-foreground">
+                            Manual
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+                            Online
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         {client.has_discount ? (
@@ -270,7 +343,7 @@ const AdminClients = () => {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleGrantDiscount(client.user_id, client.name)}
+                              onClick={() => handleGrantDiscount(client.id, client.name)}
                               className="text-accent hover:text-accent hover:bg-accent/10"
                             >
                               <Gift className="w-4 h-4 mr-1" />
@@ -321,6 +394,17 @@ const AdminClients = () => {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="clientEmail">Email (opcional)</Label>
+              <Input
+                id="clientEmail"
+                type="email"
+                placeholder="email@exemplo.com"
+                value={newClientEmail}
+                onChange={(e) => setNewClientEmail(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="clientBirthDate">Data de Nascimento</Label>
               <Input
                 id="clientBirthDate"
@@ -328,17 +412,6 @@ const AdminClients = () => {
                 value={newClientBirthDate}
                 onChange={(e) => setNewClientBirthDate(e.target.value)}
                 max={new Date().toISOString().split('T')[0]}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="clientEmail">Email</Label>
-              <Input
-                id="clientEmail"
-                type="email"
-                placeholder="email@exemplo.com"
-                value={newClientEmail}
-                onChange={(e) => setNewClientEmail(e.target.value)}
               />
             </div>
 

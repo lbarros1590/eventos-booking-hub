@@ -186,6 +186,11 @@ const AdminFinancial = () => {
     return profile?.name || 'Cliente';
   };
 
+  const getProfileName = (profileId: string) => {
+    const profile = profiles.find(p => p.id === profileId);
+    return profile?.name || 'Cliente';
+  };
+
   const handleAddExpense = async () => {
     if (!description || !amount) {
       toast.error('Preencha todos os campos');
@@ -569,15 +574,20 @@ const AdminFinancial = () => {
                   if (booking.deposit_paid) received += deposit;
                   if (booking.final_balance_paid) received += (total - deposit);
                   
+                  // Get client name from profile_id or user_id
+                  const clientName = booking.profile_id 
+                    ? getProfileName(booking.profile_id)
+                    : getUserName(booking.user_id);
+                  
                   return (
                     <div
                       key={booking.id}
                       className="flex items-center justify-between p-3 bg-success/5 rounded-lg"
                     >
                       <div>
-                        <p className="font-medium text-foreground text-sm">{getUserName(booking.user_id)}</p>
+                        <p className="font-medium text-foreground text-sm">{clientName}</p>
                         <p className="text-xs text-muted-foreground">
-                          {format(parseISO(booking.booking_date), 'dd/MM/yyyy')}
+                          {format(parseISO(booking.booking_date), 'dd/MM/yyyy', { locale: ptBR })}
                           {booking.discount_applied && Number(booking.discount_applied) > 0 && (
                             <span className="ml-2 text-accent">
                               (-R$ {Number(booking.discount_applied).toFixed(0)} desc.)
