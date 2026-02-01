@@ -61,6 +61,7 @@ const NewReservation = () => {
       custom_checklist_items: null,
       discount_applied: profile?.has_discount ? Math.round((priceInfo.basePrice + priceInfo.cleaningFee) * 0.2) : 0,
       origin: 'web',
+      payment_method: null,
     });
 
     if (error) {

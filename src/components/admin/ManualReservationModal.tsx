@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { useApp, Profile } from '@/contexts/AppContext';
 import { useVenueSettings } from '@/hooks/useVenueSettings';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Loader2, User, Plus, Calendar, DollarSign } from 'lucide-react';
+import { Loader2, User, Plus, Calendar, DollarSign, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ManualReservationModalProps {
@@ -24,13 +25,13 @@ const ManualReservationModal = ({
   selectedDate,
   onSuccess,
 }: ManualReservationModalProps) => {
-  const { profiles, createManualBooking, createManualClient } = useApp();
+  const { profiles, createManualBooking, createManualClient, refreshData } = useApp();
   const { calculatePriceForDate } = useVenueSettings();
   
-  const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [selectedProfileId, setSelectedProfileId] = useState<string>('');
   const [customPrice, setCustomPrice] = useState<string>('');
-  const [bookingStatus, setBookingStatus] = useState<'pending' | 'confirmed'>('pending');
-  const [depositPaid, setDepositPaid] = useState(false);
+  const [depositReceived, setDepositReceived] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<string>('');
   const [loading, setLoading] = useState(false);
   
   // Quick client creation
@@ -48,9 +49,31 @@ const ManualReservationModal = ({
     }
   }, [selectedDate, priceInfo]);
 
+  // Reset form when modal closes
+  useEffect(() => {
+    if (!open) {
+      setSelectedProfileId('');
+      setCustomPrice('');
+      setDepositReceived(false);
+      setPaymentMethod('');
+      setShowNewClient(false);
+      setNewClientName('');
+      setNewClientPhone('');
+      setNewClientBirthDate('');
+      setNewClientEmail('');
+    }
+  }, [open]);
+
   const handleCreateQuickClient = async () => {
     if (!newClientName || !newClientPhone) {
       toast.error('Nome e telefone são obrigatórios');
+      return;
+    }
+
+    // Check if phone already exists
+    const phoneExists = profiles.some(p => p.phone === newClientPhone);
+    if (phoneExists) {
+      toast.error('Já existe um cliente com este telefone');
       return;
     }
 
@@ -66,7 +89,8 @@ const ManualReservationModal = ({
       toast.error('Erro ao criar cliente');
     } else if (result.profile) {
       toast.success('Cliente criado!');
-      setSelectedClientId(result.profile.user_id);
+      await refreshData();
+      setSelectedProfileId(result.profile.id);
       setShowNewClient(false);
       setNewClientName('');
       setNewClientPhone('');
@@ -77,22 +101,26 @@ const ManualReservationModal = ({
   };
 
   const handleCreateReservation = async () => {
-    if (!selectedDate || !selectedClientId) {
+    if (!selectedDate || !selectedProfileId) {
       toast.error('Selecione um cliente');
       return;
     }
 
     const price = parseFloat(customPrice) || priceInfo?.total || 0;
     
+    // Status is determined by deposit payment
+    const status = depositReceived ? 'confirmed' : 'pending';
+    
     setLoading(true);
     const result = await createManualBooking({
-      user_id: selectedClientId,
+      profile_id: selectedProfileId,
       booking_date: selectedDate.toISOString().split('T')[0],
       price: priceInfo?.basePrice || price,
       cleaning_fee: priceInfo?.cleaningFee || 0,
       total_price: price,
-      status: bookingStatus,
-      deposit_paid: depositPaid,
+      status,
+      deposit_paid: depositReceived,
+      payment_method: paymentMethod || null,
       origin: 'admin_manual',
     });
 
@@ -102,11 +130,6 @@ const ManualReservationModal = ({
       toast.success('Reserva criada com sucesso!');
       onOpenChange(false);
       await onSuccess();
-      // Reset form
-      setSelectedClientId('');
-      setCustomPrice('');
-      setBookingStatus('pending');
-      setDepositPaid(false);
     }
     setLoading(false);
   };
@@ -114,9 +137,12 @@ const ManualReservationModal = ({
   const finalPrice = parseFloat(customPrice) || priceInfo?.total || 0;
   const depositAmount = Math.round(finalPrice / 2);
 
+  // Sort profiles alphabetically
+  const sortedProfiles = [...profiles].sort((a, b) => a.name.localeCompare(b.name));
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-primary" />
@@ -137,14 +163,22 @@ const ManualReservationModal = ({
 
             {!showNewClient ? (
               <>
-                <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+                <Select value={selectedProfileId} onValueChange={setSelectedProfileId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um cliente" />
                   </SelectTrigger>
                   <SelectContent>
-                    {profiles.map((profile) => (
-                      <SelectItem key={profile.user_id} value={profile.user_id}>
-                        {profile.name} {profile.phone && `- ${profile.phone}`}
+                    {sortedProfiles.map((profile) => (
+                      <SelectItem key={profile.id} value={profile.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{profile.name}</span>
+                          {profile.phone && (
+                            <span className="text-muted-foreground text-xs">- {profile.phone}</span>
+                          )}
+                          {profile.user_id === null && (
+                            <span className="text-xs bg-secondary px-1.5 py-0.5 rounded">Manual</span>
+                          )}
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -162,16 +196,22 @@ const ManualReservationModal = ({
                 </Button>
               </>
             ) : (
-              <div className="p-4 border border-border rounded-lg space-y-3">
+              <div className="p-4 border border-border rounded-lg space-y-3 bg-secondary/30">
                 <Input
-                  placeholder="Nome do cliente"
+                  placeholder="Nome do cliente *"
                   value={newClientName}
                   onChange={(e) => setNewClientName(e.target.value)}
                 />
                 <Input
-                  placeholder="Telefone"
+                  placeholder="Telefone *"
                   value={newClientPhone}
                   onChange={(e) => setNewClientPhone(e.target.value)}
+                />
+                <Input
+                  type="email"
+                  placeholder="Email (opcional)"
+                  value={newClientEmail}
+                  onChange={(e) => setNewClientEmail(e.target.value)}
                 />
                 <Input
                   type="date"
@@ -179,12 +219,6 @@ const ManualReservationModal = ({
                   value={newClientBirthDate}
                   onChange={(e) => setNewClientBirthDate(e.target.value)}
                   max={new Date().toISOString().split('T')[0]}
-                />
-                <Input
-                  type="email"
-                  placeholder="Email (opcional)"
-                  value={newClientEmail}
-                  onChange={(e) => setNewClientEmail(e.target.value)}
                 />
                 <div className="flex gap-2">
                   <Button
@@ -194,6 +228,7 @@ const ManualReservationModal = ({
                     onClick={() => setShowNewClient(false)}
                     className="flex-1"
                   >
+                    <X className="w-4 h-4 mr-1" />
                     Cancelar
                   </Button>
                   <Button
@@ -203,7 +238,12 @@ const ManualReservationModal = ({
                     disabled={loading}
                     className="flex-1 bg-gradient-primary"
                   >
-                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Criar'}
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                      <>
+                        <Check className="w-4 h-4 mr-1" />
+                        Criar
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
@@ -233,35 +273,47 @@ const ManualReservationModal = ({
             )}
           </div>
 
-          {/* Status */}
-          <div className="space-y-3">
-            <Label>Status Inicial</Label>
-            <Select value={bookingStatus} onValueChange={(v) => setBookingStatus(v as 'pending' | 'confirmed')}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pending">Pendente (Aguardando Depósito)</SelectItem>
-                <SelectItem value="confirmed">Confirmada</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Deposit Paid */}
-          <div className="flex items-center justify-between p-4 bg-secondary rounded-lg">
-            <div>
-              <p className="font-medium">Sinal (50%)</p>
-              <p className="text-sm text-muted-foreground">R$ {depositAmount}</p>
+          {/* Deposit Toggle */}
+          <div className="p-4 bg-secondary rounded-lg space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Sinal de 50% Recebido?</p>
+                <p className="text-sm text-muted-foreground">R$ {depositAmount}</p>
+              </div>
+              <Switch
+                checked={depositReceived}
+                onCheckedChange={setDepositReceived}
+              />
             </div>
-            <Button
-              type="button"
-              variant={depositPaid ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setDepositPaid(!depositPaid)}
-              className={depositPaid ? 'bg-success hover:bg-success/90' : ''}
-            >
-              {depositPaid ? 'Pago' : 'Marcar como Pago'}
-            </Button>
+
+            {depositReceived && (
+              <div className="space-y-2">
+                <Label>Forma de Pagamento</Label>
+                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pix">PIX</SelectItem>
+                    <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                    <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
+                    <SelectItem value="cartao_debito">Cartão de Débito</SelectItem>
+                    <SelectItem value="transferencia">Transferência</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="pt-2 border-t border-border">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Status da reserva:</span>
+                {depositReceived ? (
+                  <span className="font-medium text-success">Confirmada</span>
+                ) : (
+                  <span className="font-medium text-warning">Pendente</span>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Summary */}
@@ -272,20 +324,20 @@ const ManualReservationModal = ({
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Depósito (50%)</span>
-              <span className={depositPaid ? 'text-success' : ''}>
-                R$ {depositAmount} {depositPaid && '✓'}
+              <span className={depositReceived ? 'text-success' : ''}>
+                R$ {depositAmount} {depositReceived && '✓'}
               </span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Restante</span>
-              <span>R$ {finalPrice - (depositPaid ? depositAmount : 0)}</span>
+              <span>R$ {finalPrice - (depositReceived ? depositAmount : 0)}</span>
             </div>
           </div>
 
           {/* Submit */}
           <Button
             onClick={handleCreateReservation}
-            disabled={loading || !selectedClientId}
+            disabled={loading || !selectedProfileId}
             className="w-full bg-gradient-primary hover:opacity-90"
             size="lg"
           >

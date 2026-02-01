@@ -56,6 +56,10 @@ const AdminCalendar = () => {
 
   const getSelectedBookingProfile = () => {
     if (!selectedBooking) return null;
+    // First try to find by profile_id, then by user_id
+    if (selectedBooking.profile_id) {
+      return profiles.find(p => p.id === selectedBooking.profile_id) || null;
+    }
     return profiles.find(p => p.user_id === selectedBooking.user_id) || null;
   };
 
