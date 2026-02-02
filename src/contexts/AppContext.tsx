@@ -237,17 +237,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [role]);
 
   // Mantive as funções originais abaixo (signIn, signUp, etc)
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error };
-  };
-
   const signUp = async (email: string, password: string, name: string, phone: string, birthDate?: string) => {
     const redirectUrl = `${window.location.origin}/`;
+    
+    // LOG DE DEBUG: Para você ver no console do navegador o que está sendo enviado
+    console.log("Enviando cadastro:", { email, name, phone, birth_date: birthDate });
+
     const { error } = await supabase.auth.signUp({
-      email, password,
-      options: { emailRedirectTo: redirectUrl, data: { name, phone, birth_date: birthDate || null } },
+      email,
+      password,
+      options: {
+        emailRedirectTo: redirectUrl,
+        data: {
+          // AQUI ESTÁ O SEGREDO: As chaves devem bater com o SQL
+          name: name,
+          phone: phone,
+          birth_date: birthDate || null // Envia null se estiver vazio, não string vazia
+        },
+      },
     });
+
+    if (error) {
+        console.error("Erro no Supabase Auth:", error);
+    }
+    
     return { error };
   };
 
