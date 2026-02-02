@@ -6,7 +6,7 @@ export type UserRole = 'admin' | 'user' | null;
 
 export interface Profile {
   id: string;
-  user_id: string | null; // Nullable for manual clients
+  user_id: string | null;
   name: string;
   email: string | null;
   phone: string | null;
@@ -109,6 +109,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Fetch user profile and role
   const fetchUserData = async (userId: string) => {
     try {
+      console.log("Fetching user data for:", userId);
       // Fetch profile
       const { data: profileData } = await supabase
         .from('profiles')
@@ -121,12 +122,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
 
       // Fetch role using the database function
-      const { data: roleData } = await supabase
+      const { data: roleData, error } = await supabase
         .rpc('get_user_role', { _user_id: userId });
 
-      setRole((roleData as UserRole) || 'user');
+      console.log("Role fetched:", roleData, "Error:", error);
+
+      if (roleData) {
+        setRole(roleData as UserRole);
+      } else {
+        setRole('user');
+      }
     } catch (error) {
       console.error('Error fetching user data:', error);
+      setRole('user'); // Fallback seguro
     }
   };
 
@@ -168,39 +176,57 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // Setup auth state listener
+  // Setup auth state listener - CORRIGIDO
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+    let mounted = true;
+
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (session?.user) {
-          // Defer Supabase calls with setTimeout to prevent deadlock
-          setTimeout(() => {
-            fetchUserData(session.user.id);
-          }, 0);
-        } else {
-          setProfile(null);
-          setRole(null);
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          
+          if (session?.user) {
+            // AWAIT AQUI É CRUCIAL: Espera buscar a role ANTES de tirar o loading
+            await fetchUserData(session.user.id);
+          }
+        }
+      } catch (error) {
+        console.error("Auth init error:", error);
+      } finally {
+        if (mounted) {
+          setLoading(false); // Só tira o loading agora que sabemos a role
+        }
+      }
+    };
+
+    initializeAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          
+          if (session?.user) {
+            setLoading(true); // Bloqueia UI enquanto troca de usuário
+            await fetchUserData(session.user.id);
+            setLoading(false);
+          } else {
+            setProfile(null);
+            setRole(null);
+            setLoading(false);
+          }
         }
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        fetchUserData(session.user.id);
-      }
-      
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Refresh data when role changes
@@ -210,28 +236,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [role]);
 
+  // Mantive as funções originais abaixo (signIn, signUp, etc)
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error };
   };
 
   const signUp = async (email: string, password: string, name: string, phone: string, birthDate?: string) => {
     const redirectUrl = `${window.location.origin}/`;
-    
     const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          name,
-          phone,
-          birth_date: birthDate || null,
-        },
-      },
+      email, password,
+      options: { emailRedirectTo: redirectUrl, data: { name, phone, birth_date: birthDate || null } },
     });
     return { error };
   };
@@ -244,233 +259,105 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setExpenses([]);
   };
 
-  const getProfileById = (profileId: string): Profile | undefined => {
-    return profiles.find(p => p.id === profileId);
-  };
-
-  const getProfileByUserId = (userId: string): Profile | undefined => {
-    return profiles.find(p => p.user_id === userId);
-  };
+  const getProfileById = (profileId: string) => profiles.find(p => p.id === profileId);
+  const getProfileByUserId = (userId: string) => profiles.find(p => p.user_id === userId);
 
   const createBooking = async (booking: Omit<Booking, 'id' | 'created_at' | 'user_id' | 'profile_id'>) => {
     if (!user || !profile) return { error: new Error('Not authenticated') };
-
-    const { error } = await supabase
-      .from('bookings')
-      .insert({
-        user_id: user.id,
-        profile_id: profile.id,
-        booking_date: booking.booking_date,
-        price: booking.price,
-        cleaning_fee: booking.cleaning_fee,
-        total_price: booking.total_price,
-        status: booking.status,
-        checklist_confirmed: booking.checklist_confirmed,
-        terms_accepted: booking.terms_accepted,
-        deposit_paid: booking.deposit_paid || false,
-        final_balance_paid: booking.final_balance_paid || false,
-        discount_applied: booking.discount_applied || 0,
-        origin: booking.origin || 'web',
-      });
-
+    const { error } = await supabase.from('bookings').insert({
+      user_id: user.id, profile_id: profile.id, ...booking,
+      deposit_paid: booking.deposit_paid || false,
+      final_balance_paid: booking.final_balance_paid || false,
+      discount_applied: booking.discount_applied || 0,
+      origin: booking.origin || 'web',
+    });
     if (!error) {
-      // Increment reservation count
-      await supabase
-        .from('profiles')
-        .update({ reservation_count: profile.reservation_count + 1 })
-        .eq('id', profile.id);
-      
+      await supabase.from('profiles').update({ reservation_count: profile.reservation_count + 1 }).eq('id', profile.id);
       await refreshData();
       await fetchUserData(user.id);
     }
-
     return { error };
   };
 
   const updateBookingStatus = async (bookingId: string, status: Booking['status']) => {
-    await supabase
-      .from('bookings')
-      .update({ status })
-      .eq('id', bookingId);
-    
+    await supabase.from('bookings').update({ status }).eq('id', bookingId);
     await refreshData();
   };
 
   const updateBooking = async (bookingId: string, data: Partial<Booking>) => {
-    await supabase
-      .from('bookings')
-      .update(data)
-      .eq('id', bookingId);
-    
+    await supabase.from('bookings').update(data).eq('id', bookingId);
     await refreshData();
   };
 
   const addExpense = async (expense: Omit<Expense, 'id'>) => {
-    await supabase
-      .from('expenses')
-      .insert({
-        description: expense.description,
-        amount: expense.amount,
-        category: expense.category,
-        expense_date: expense.expense_date,
-        payment_date: expense.payment_date,
-      });
-    
+    await supabase.from('expenses').insert(expense);
     await refreshData();
   };
 
   const updateExpense = async (id: string, expense: Partial<Omit<Expense, 'id'>>) => {
-    await supabase
-      .from('expenses')
-      .update(expense)
-      .eq('id', id);
-    
+    await supabase.from('expenses').update(expense).eq('id', id);
     await refreshData();
   };
 
   const deleteExpense = async (expenseId: string) => {
-    await supabase
-      .from('expenses')
-      .delete()
-      .eq('id', expenseId);
-    
+    await supabase.from('expenses').delete().eq('id', expenseId);
     await refreshData();
   };
 
   const grantDiscount = async (profileId: string) => {
-    await supabase
-      .from('profiles')
-      .update({ has_discount: true })
-      .eq('id', profileId);
-    
+    await supabase.from('profiles').update({ has_discount: true }).eq('id', profileId);
     await refreshData();
-    
-    // Refresh current user's profile if it's their own
-    if (user && profile && profile.id === profileId) {
-      await fetchUserData(user.id);
-    }
+    if (user && profile && profile.id === profileId) await fetchUserData(user.id);
   };
 
-  const isDateBooked = (date: Date): boolean => {
+  const isDateBooked = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0];
-    return bookings.some(
-      (b) => b.booking_date === dateStr && b.status !== 'cancelled'
-    );
+    return bookings.some((b) => b.booking_date === dateStr && b.status !== 'cancelled');
   };
 
-  // This function is now deprecated - use useVenueSettings hook for dynamic pricing
-  const calculatePrice = (date: Date): { basePrice: number; cleaningFee: number; total: number } => {
+  const calculatePrice = (date: Date) => {
     const dayOfWeek = date.getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6;
-    const basePrice = isWeekend ? 600 : 400;
-    const cleaningFee = 70;
-    
-    let total = basePrice + cleaningFee;
-    
-    if (profile?.has_discount) {
-      total = total * 0.8;
-    }
-    
-    return { basePrice, cleaningFee, total };
+    let total = (isWeekend ? 600 : 400) + 70;
+    if (profile?.has_discount) total = total * 0.8;
+    return { basePrice: isWeekend ? 600 : 400, cleaningFee: 70, total };
   };
 
-  const createManualClient = async (data: ManualClientData): Promise<{ error: Error | null; profile: Profile | null }> => {
-    // Create profile without user_id (manual client)
-    const { data: profileData, error } = await supabase
-      .from('profiles')
-      .insert({
-        user_id: null, // No auth account for manual clients
-        name: data.name,
-        phone: data.phone,
-        birth_date: data.birth_date,
-        email: data.email || null,
-        reservation_count: 0,
-        has_discount: false,
-        loyalty_points: 0,
-      })
-      .select()
-      .single();
-    
-    if (!error) {
-      await refreshData();
-    }
-    
+  const createManualClient = async (data: ManualClientData) => {
+    const { data: profileData, error } = await supabase.from('profiles').insert({
+      user_id: null, ...data, reservation_count: 0, has_discount: false, loyalty_points: 0,
+    }).select().single();
+    if (!error) await refreshData();
     return { error, profile: profileData as Profile | null };
   };
 
-  const createManualBooking = async (data: ManualBookingData): Promise<{ error: Error | null }> => {
-    // Get the profile to update reservation count
+  const createManualBooking = async (data: ManualBookingData) => {
     const targetProfile = profiles.find(p => p.id === data.profile_id);
-    
-    const { error } = await supabase
-      .from('bookings')
-      .insert({
-        user_id: targetProfile?.user_id || null,
-        profile_id: data.profile_id,
-        booking_date: data.booking_date,
-        price: data.price,
-        cleaning_fee: data.cleaning_fee,
-        total_price: data.total_price,
-        status: data.status,
-        deposit_paid: data.deposit_paid,
-        payment_method: data.payment_method || null,
-        origin: data.origin,
-        checklist_confirmed: true,
-        terms_accepted: true,
-      });
-    
+    const { error } = await supabase.from('bookings').insert({
+      user_id: targetProfile?.user_id || null, ...data, checklist_confirmed: true, terms_accepted: true,
+    });
     if (!error && targetProfile) {
-      // Increment reservation count for the profile
-      await supabase
-        .from('profiles')
-        .update({ reservation_count: targetProfile.reservation_count + 1 })
-        .eq('id', data.profile_id);
-      
+      await supabase.from('profiles').update({ reservation_count: targetProfile.reservation_count + 1 }).eq('id', data.profile_id);
       await refreshData();
     }
-    
     return { error };
   };
 
   return (
-    <AppContext.Provider
-      value={{
-        user,
-        session,
-        profile,
-        role,
-        profiles,
-        bookings,
-        expenses,
-        loading,
-        signIn,
-        signUp,
-        signOut,
-        createBooking,
-        updateBookingStatus,
-        updateBooking,
-        addExpense,
-        updateExpense,
-        deleteExpense,
-        grantDiscount,
-        isDateBooked,
-        calculatePrice,
-        refreshData,
-        createManualClient,
-        createManualBooking,
-        getProfileById,
-        getProfileByUserId,
-      }}
-    >
+    <AppContext.Provider value={{
+        user, session, profile, role, profiles, bookings, expenses, loading,
+        signIn, signUp, signOut, createBooking, updateBookingStatus, updateBooking,
+        addExpense, updateExpense, deleteExpense, grantDiscount, isDateBooked,
+        calculatePrice, refreshData, createManualClient, createManualBooking,
+        getProfileById, getProfileByUserId,
+      }}>
       {children}
     </AppContext.Provider>
   );
 };
 
-export const useApp = (): AppContextType => {
+export const useApp = () => {
   const context = useContext(AppContext);
-  if (context === undefined) {
-    throw new Error('useApp must be used within an AppProvider');
-  }
+  if (context === undefined) throw new Error('useApp must be used within an AppProvider');
   return context;
 };
