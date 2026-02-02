@@ -1,10 +1,16 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { useVenueSettings } from '@/hooks/useVenueSettings';
+import { useInventory } from '@/hooks/useInventory';
 import { getIcon } from '@/lib/icons';
 import { Loader2 } from 'lucide-react';
+import { useEffect } from 'react';
 
 const AmenitiesSection = () => {
-  const { settings, loading } = useVenueSettings();
+  const { items, loading, fetchItems } = useInventory();
+
+  // Fetch only active items for the public page
+  useEffect(() => {
+    fetchItems(true); // activeOnly = true
+  }, []);
 
   if (loading) {
     return (
@@ -16,7 +22,12 @@ const AmenitiesSection = () => {
     );
   }
 
-  const amenities = settings?.amenities_list || [];
+  // Filter active items and format for display
+  const amenities = items.filter(item => item.is_active).map(item => ({
+    id: item.id,
+    name: item.quantity > 1 ? `${item.quantity} ${item.name}` : item.name,
+    icon: item.icon_name || 'Check',
+  }));
 
   return (
     <section id="amenities" className="py-20 md:py-32 bg-background">

@@ -13,6 +13,7 @@ import {
   Home,
   Settings,
   FileBarChart,
+  Package,
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -36,6 +37,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { label: 'Financeiro', icon: DollarSign, path: '/admin/financial' },
     { label: 'Relatórios', icon: FileBarChart, path: '/admin/reports' },
     { label: 'Clientes', icon: Users, path: '/admin/clients' },
+    { label: 'Inventário', icon: Package, path: '/admin/inventory' },
     { label: 'Configurações', icon: Settings, path: '/admin/settings' },
   ];
 
