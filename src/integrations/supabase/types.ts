@@ -34,7 +34,7 @@ export type Database = {
           terms_accepted: boolean
           total_price: number
           updated_at: string
-          user_id: string
+          user_id: string | null
           waive_cleaning_fee: boolean
         }
         Insert: {
@@ -56,7 +56,7 @@ export type Database = {
           terms_accepted?: boolean
           total_price: number
           updated_at?: string
-          user_id: string
+          user_id?: string | null
           waive_cleaning_fee?: boolean
         }
         Update: {
@@ -78,7 +78,7 @@ export type Database = {
           terms_accepted?: boolean
           total_price?: number
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
           waive_cleaning_fee?: boolean
         }
         Relationships: [
