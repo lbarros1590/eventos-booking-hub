@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Booking, Profile } from '@/contexts/AppContext';
 import { ChecklistItem, useVenueSettings } from '@/hooks/useVenueSettings';
+import { useInventory } from '@/hooks/useInventory';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
@@ -35,6 +36,7 @@ const BookingDetailsModal = ({
   onRefresh,
 }: BookingDetailsModalProps) => {
   const { settings } = useVenueSettings();
+  const { items: inventoryItems } = useInventory();
   const [updating, setUpdating] = useState(false);
   const [depositPaid, setDepositPaid] = useState(false);
   const [finalBalancePaid, setFinalBalancePaid] = useState(false);
@@ -139,7 +141,29 @@ const BookingDetailsModal = ({
     setChecklistItems(checklistItems.filter(item => item.id !== id));
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    // Fetch current inventory items for the checklist
+    const { data: currentInventory } = await supabase
+      .from('inventory_items')
+      .select('*')
+      .eq('is_active', true)
+      .order('category')
+      .order('name');
+
+    const inventoryChecklist = (currentInventory || []).map(item => ({
+      name: item.quantity > 1 ? `${item.name} (${item.quantity} unidades)` : item.name,
+      category: item.category as string,
+    }));
+
+    // Group by category for organized printing
+    const groupedInventory = inventoryChecklist.reduce((acc, item) => {
+      if (!acc[item.category]) {
+        acc[item.category] = [];
+      }
+      acc[item.category].push(item.name);
+      return acc;
+    }, {} as Record<string, string[]>);
+
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
@@ -296,15 +320,34 @@ const BookingDetailsModal = ({
         </div>
 
         <div class="section">
-          <div class="section-title">Checklist de Entrega</div>
-          <ul class="checklist">
-            ${checklistItems.map(item => `
-              <li>
-                <div class="checkbox"></div>
-                <span>${item.item}</span>
-              </li>
-            `).join('')}
-          </ul>
+          <div class="section-title">Checklist de Entrega - Inventário do Espaço</div>
+          ${Object.entries(groupedInventory).map(([category, items]) => `
+            <div style="margin-bottom: 15px;">
+              <p style="font-weight: bold; color: #0ea5e9; font-size: 13px; margin-bottom: 8px;">${category}</p>
+              <ul class="checklist">
+                ${(items as string[]).map(item => `
+                  <li>
+                    <div class="checkbox"></div>
+                    <span>${item}</span>
+                  </li>
+                `).join('')}
+              </ul>
+            </div>
+          `).join('')}
+          
+          ${checklistItems.length > 0 ? `
+            <div style="margin-top: 20px;">
+              <p style="font-weight: bold; color: #666; font-size: 13px; margin-bottom: 8px;">Itens Adicionais</p>
+              <ul class="checklist">
+                ${checklistItems.map(item => `
+                  <li>
+                    <div class="checkbox"></div>
+                    <span>${item.item}</span>
+                  </li>
+                `).join('')}
+              </ul>
+            </div>
+          ` : ''}
         </div>
 
         <div class="section">

@@ -148,6 +148,39 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_items: {
+        Row: {
+          category: string
+          created_at: string
+          icon_name: string | null
+          id: string
+          is_active: boolean
+          name: string
+          quantity: number | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          quantity?: number | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          quantity?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           birth_date: string | null
