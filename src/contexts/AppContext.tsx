@@ -112,11 +112,35 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     try {
       console.log("Fetching user data for:", userId);
       // Fetch profile
-      const { data: profileData } = await supabase
+      let { data: profileData } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle(); 
+
+      // --- CORREÇÃO AUTOMÁTICA DE PERFIL FALTANTE ---
+      if (!profileData) {
+        console.log("Perfil não encontrado. Criando automaticamente...");
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert([{
+            user_id: userId,
+            name: 'Novo Usuário', // Nome provisório
+            email: null,
+            reservation_count: 0,
+            has_discount: false,
+            loyalty_points: 0
+          }])
+          .select()
+          .single();
+        
+        if (!createError && newProfile) {
+           profileData = newProfile;
+        } else {
+           console.error("Erro ao criar perfil automático:", createError);
+        }
+      }
+      // ------------------------------------------------
 
       if (profileData) {
         setProfile(profileData as Profile);
@@ -236,7 +260,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // --- FUNÇÕES DE AUTH ---
 
-  // ✅ AQUI ESTÁ A CORREÇÃO: REINSERI A FUNÇÃO SIGNIN
+  // ✅ Função SIGNIN corrigida
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error };
