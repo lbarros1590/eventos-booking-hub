@@ -38,6 +38,7 @@ export interface Booking {
   payment_method: string | null;
 }
 
+
 export interface Expense {
   id: string;
   description: string;
