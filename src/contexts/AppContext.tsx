@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 
+// ... (Mantenho suas interfaces iguais para não quebrar nada)
 export type UserRole = 'admin' | 'user' | null;
 
 export interface Profile {
@@ -106,11 +107,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch user profile and role (Versão Segura)
+  // --- BUSCA DE DADOS DE USUÁRIO (Defensiva) ---
   const fetchUserData = async (userId: string) => {
     try {
       console.log("Fetching user data for:", userId);
       
+      // 1. Tenta buscar perfil
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
@@ -119,8 +121,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       if (profileData) {
         setProfile(profileData as Profile);
+      } else {
+        console.warn("Usuário logado mas sem perfil encontrado.");
       }
 
+      // 2. Tenta buscar cargo
       const { data: roleData } = await supabase
         .rpc('get_user_role', { _user_id: userId });
 
@@ -131,30 +136,38 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
-      setRole('user');
+      setRole('user'); // Garante que não quebra o app
     }
   };
 
+  // --- BUSCA DE DADOS GERAIS (Calendário e Admin) ---
   const refreshData = async () => {
     try {
+      // 1. CALENDÁRIO: Busca reservas (Sempre, para todos)
+      // Removemos o filtro de status cancelado aqui para tratar no front, ou filtramos no select
       const { data: bookingsData } = await supabase
         .from('bookings')
         .select('*')
         .order('booking_date', { ascending: false });
 
-      if (bookingsData) setBookings(bookingsData as Booking[]);
+      if (bookingsData) {
+        setBookings(bookingsData as Booking[]);
+      }
 
+      // 2. ADMIN: Só busca o resto se for admin
       if (role === 'admin') {
         const { data: profilesData } = await supabase
           .from('profiles')
           .select('*')
           .order('name', { ascending: true });
+
         if (profilesData) setProfiles(profilesData as Profile[]);
 
         const { data: expensesData } = await supabase
           .from('expenses')
           .select('*')
           .order('expense_date', { ascending: false });
+
         if (expensesData) setExpenses(expensesData as Expense[]);
       }
     } catch (error) {
@@ -162,22 +175,33 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  // --- EFEITO 1: Inicialização e Auth (Com Loading Seguro) ---
   useEffect(() => {
     let mounted = true;
+
     const initializeAuth = async () => {
       try {
+        setLoading(true); // Garante loading inicial
         const { data: { session } } = await supabase.auth.getSession();
+        
         if (mounted) {
           setSession(session);
           setUser(session?.user ?? null);
-          if (session?.user) await fetchUserData(session.user.id);
+          
+          if (session?.user) {
+            await fetchUserData(session.user.id);
+          }
         }
       } catch (error) {
         console.error("Auth init error:", error);
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+            setLoading(false); // <--- OBRIGATÓRIO: Destrava o site
+            refreshData(); // <--- OBRIGATÓRIO: Carrega calendário mesmo sem login
+        }
       }
     };
+
     initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -185,33 +209,44 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (mounted) {
           setSession(session);
           setUser(session?.user ?? null);
+          
           if (session?.user) {
             setLoading(true);
             await fetchUserData(session.user.id);
-            setLoading(false);
+            await refreshData(); // Atualiza dados ao logar
+            setLoading(false); // Destrava após carregar user
           } else {
             setProfile(null);
             setRole(null);
-            setLoading(false);
+            setLoading(false); // Destrava se deslogar
+            refreshData(); // Mantém calendário atualizado
           }
         }
       }
     );
+
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
+  // --- EFEITO 2: Atualiza dados extras se virar Admin ---
   useEffect(() => {
-    if (role) refreshData();
+    if (role === 'admin') {
+      refreshData();
+    }
   }, [role]);
 
-  // --- FUNÇÕES DE AUTH ---
+  // --- FUNÇÕES (SignIn restaurado e corrigido) ---
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error };
+    try {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        return { error };
+    } catch (e: any) {
+        return { error: e };
+    }
   };
 
   const signUp = async (email: string, password: string, name: string, phone: string, birthDate?: string) => {
@@ -234,8 +269,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setRole(null);
     setProfiles([]);
     setExpenses([]);
+    window.location.href = '/'; // Força recarregar para limpar estados
   };
 
+  // ... (Getters e Actions mantidos iguais) ...
   const getProfileById = (profileId: string) => profiles.find(p => p.id === profileId);
   const getProfileByUserId = (userId: string) => profiles.find(p => p.user_id === userId);
 
