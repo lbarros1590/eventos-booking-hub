@@ -38,7 +38,6 @@ export interface Booking {
   payment_method: string | null;
 }
 
-
 export interface Expense {
   id: string;
   description: string;
@@ -107,47 +106,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch user profile and role
+  // Fetch user profile and role (Versão Segura)
   const fetchUserData = async (userId: string) => {
     try {
       console.log("Fetching user data for:", userId);
-      // Fetch profile
-      let { data: profileData } = await supabase
+      
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle(); 
 
-      // --- CORREÇÃO AUTOMÁTICA DE PERFIL FALTANTE ---
-      if (!profileData) {
-        console.log("Perfil não encontrado. Criando automaticamente...");
-        const { data: newProfile, error: createError } = await supabase
-          .from('profiles')
-          .insert([{
-            user_id: userId,
-            name: 'Novo Usuário', // Nome provisório
-            email: null,
-            reservation_count: 0,
-            has_discount: false,
-            loyalty_points: 0
-          }])
-          .select()
-          .single();
-        
-        if (!createError && newProfile) {
-           profileData = newProfile;
-        } else {
-           console.error("Erro ao criar perfil automático:", createError);
-        }
-      }
-      // ------------------------------------------------
-
       if (profileData) {
         setProfile(profileData as Profile);
       }
 
-      // Fetch role using the database function
-      const { data: roleData, error } = await supabase
+      const { data: roleData } = await supabase
         .rpc('get_user_role', { _user_id: userId });
 
       if (roleData) {
@@ -157,73 +131,53 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
-      setRole('user'); // Fallback seguro
+      setRole('user');
     }
   };
 
-  // Fetch all data
   const refreshData = async () => {
     try {
-      // Fetch all bookings (for checking availability)
       const { data: bookingsData } = await supabase
         .from('bookings')
         .select('*')
         .order('booking_date', { ascending: false });
 
-      if (bookingsData) {
-        setBookings(bookingsData as Booking[]);
-      }
+      if (bookingsData) setBookings(bookingsData as Booking[]);
 
-      // If admin, fetch all profiles and expenses
       if (role === 'admin') {
         const { data: profilesData } = await supabase
           .from('profiles')
           .select('*')
           .order('name', { ascending: true });
-
-        if (profilesData) {
-          setProfiles(profilesData as Profile[]);
-        }
+        if (profilesData) setProfiles(profilesData as Profile[]);
 
         const { data: expensesData } = await supabase
           .from('expenses')
           .select('*')
           .order('expense_date', { ascending: false });
-
-        if (expensesData) {
-          setExpenses(expensesData as Expense[]);
-        }
+        if (expensesData) setExpenses(expensesData as Expense[]);
       }
     } catch (error) {
       console.error('Error refreshing data:', error);
     }
   };
 
-  // Setup auth state listener
   useEffect(() => {
     let mounted = true;
-
     const initializeAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        
         if (mounted) {
           setSession(session);
           setUser(session?.user ?? null);
-          
-          if (session?.user) {
-            await fetchUserData(session.user.id);
-          }
+          if (session?.user) await fetchUserData(session.user.id);
         }
       } catch (error) {
         console.error("Auth init error:", error);
       } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+        if (mounted) setLoading(false);
       }
     };
-
     initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -231,7 +185,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (mounted) {
           setSession(session);
           setUser(session?.user ?? null);
-          
           if (session?.user) {
             setLoading(true);
             await fetchUserData(session.user.id);
@@ -244,51 +197,34 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
       }
     );
-
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
-  // Refresh data when role changes
   useEffect(() => {
-    if (role) {
-      refreshData();
-    }
+    if (role) refreshData();
   }, [role]);
 
   // --- FUNÇÕES DE AUTH ---
 
-  // ✅ Função SIGNIN corrigida
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error };
   };
-  
 
   const signUp = async (email: string, password: string, name: string, phone: string, birthDate?: string) => {
     const redirectUrl = `${window.location.origin}/`;
-    
     console.log("Enviando cadastro:", { email, name, phone, birth_date: birthDate });
-
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: redirectUrl,
-        data: {
-          name: name,
-          phone: phone,
-          birth_date: birthDate || null
-        },
+        data: { name, phone, birth_date: birthDate || null },
       },
     });
-
-    if (error) {
-        console.error("Erro no Supabase Auth:", error);
-    }
-    
     return { error };
   };
 
@@ -300,11 +236,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setExpenses([]);
   };
 
-  // --- GETTERS ---
   const getProfileById = (profileId: string) => profiles.find(p => p.id === profileId);
   const getProfileByUserId = (userId: string) => profiles.find(p => p.user_id === userId);
 
-  // --- ACTIONS ---
   const createBooking = async (booking: Omit<Booking, 'id' | 'created_at' | 'user_id' | 'profile_id'>) => {
     if (!user || !profile) return { error: new Error('Not authenticated') };
     const { error } = await supabase.from('bookings').insert({
@@ -363,11 +297,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6;
     let basePrice = isWeekend ? 600 : 400;
     const cleaningFee = 70;
-    
-    if (profile?.has_discount) {
-        basePrice = basePrice * 0.8; 
-    }
-
+    if (profile?.has_discount) basePrice = basePrice * 0.8; 
     const total = basePrice + cleaningFee;
     return { basePrice, cleaningFee, total };
   };
