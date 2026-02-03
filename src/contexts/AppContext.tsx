@@ -115,7 +115,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
-        .maybeSingle(); // Usando maybeSingle para evitar erro 406 se não existir
+        .maybeSingle(); 
 
       if (profileData) {
         setProfile(profileData as Profile);
