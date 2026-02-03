@@ -115,7 +115,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle(); // Usando maybeSingle para evitar erro 406 se não existir
 
       if (profileData) {
         setProfile(profileData as Profile);
@@ -124,8 +124,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       // Fetch role using the database function
       const { data: roleData, error } = await supabase
         .rpc('get_user_role', { _user_id: userId });
-
-      console.log("Role fetched:", roleData, "Error:", error);
 
       if (roleData) {
         setRole(roleData as UserRole);
@@ -176,7 +174,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // Setup auth state listener - CORRIGIDO
+  // Setup auth state listener
   useEffect(() => {
     let mounted = true;
 
@@ -189,7 +187,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           setUser(session?.user ?? null);
           
           if (session?.user) {
-            // AWAIT AQUI É CRUCIAL: Espera buscar a role ANTES de tirar o loading
             await fetchUserData(session.user.id);
           }
         }
@@ -197,7 +194,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         console.error("Auth init error:", error);
       } finally {
         if (mounted) {
-          setLoading(false); // Só tira o loading agora que sabemos a role
+          setLoading(false);
         }
       }
     };
@@ -211,7 +208,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           setUser(session?.user ?? null);
           
           if (session?.user) {
-            setLoading(true); // Bloqueia UI enquanto troca de usuário
+            setLoading(true);
             await fetchUserData(session.user.id);
             setLoading(false);
           } else {
@@ -236,11 +233,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [role]);
 
-  // Mantive as funções originais abaixo (signIn, signUp, etc)
+  // --- FUNÇÕES DE AUTH ---
+
+  // ✅ AQUI ESTÁ A CORREÇÃO: REINSERI A FUNÇÃO SIGNIN
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return { error };
+  };
+
   const signUp = async (email: string, password: string, name: string, phone: string, birthDate?: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
-    // LOG DE DEBUG: Para você ver no console do navegador o que está sendo enviado
     console.log("Enviando cadastro:", { email, name, phone, birth_date: birthDate });
 
     const { error } = await supabase.auth.signUp({
@@ -249,10 +252,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       options: {
         emailRedirectTo: redirectUrl,
         data: {
-          // AQUI ESTÁ O SEGREDO: As chaves devem bater com o SQL
           name: name,
           phone: phone,
-          birth_date: birthDate || null // Envia null se estiver vazio, não string vazia
+          birth_date: birthDate || null
         },
       },
     });
@@ -272,9 +274,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setExpenses([]);
   };
 
+  // --- GETTERS ---
   const getProfileById = (profileId: string) => profiles.find(p => p.id === profileId);
   const getProfileByUserId = (userId: string) => profiles.find(p => p.user_id === userId);
 
+  // --- ACTIONS ---
   const createBooking = async (booking: Omit<Booking, 'id' | 'created_at' | 'user_id' | 'profile_id'>) => {
     if (!user || !profile) return { error: new Error('Not authenticated') };
     const { error } = await supabase.from('bookings').insert({
@@ -331,9 +335,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const calculatePrice = (date: Date) => {
     const dayOfWeek = date.getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6;
-    let total = (isWeekend ? 600 : 400) + 70;
-    if (profile?.has_discount) total = total * 0.8;
-    return { basePrice: isWeekend ? 600 : 400, cleaningFee: 70, total };
+    let basePrice = isWeekend ? 600 : 400;
+    const cleaningFee = 70;
+    
+    if (profile?.has_discount) {
+        basePrice = basePrice * 0.8; 
+    }
+
+    const total = basePrice + cleaningFee;
+    return { basePrice, cleaningFee, total };
   };
 
   const createManualClient = async (data: ManualClientData) => {
