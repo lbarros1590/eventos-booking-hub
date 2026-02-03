@@ -21,7 +21,7 @@ const Header = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
             <img 
-    src="/logo-novo.png"  {/* <-- MUDANÇA AQUI */}
+    src="/favicon.ico"  {/* <-- MUDANÇA AQUI */}
     alt="EJ Eventos" 
     className="h-8 w-auto sm:h-10" 
   />
