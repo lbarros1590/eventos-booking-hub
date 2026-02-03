@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 
-// ... (Mantenho suas interfaces iguais para não quebrar nada)
 export type UserRole = 'admin' | 'user' | null;
 
 export interface Profile {
@@ -107,67 +106,86 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // --- BUSCA DE DADOS DE USUÁRIO (Defensiva) ---
+  // --- FUNÇÃO DE EMERGÊNCIA: LOGOUT FORÇADO ---
+  const forceLogout = async () => {
+    console.warn("Sessão inválida ou erro crítico. Deslogando usuário...");
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+    setProfile(null);
+    setRole(null);
+    setLoading(false);
+    // Redireciona para home ou login para limpar a URL
+    if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
+        window.location.href = '/';
+    }
+  };
+
   const fetchUserData = async (userId: string) => {
     try {
       console.log("Fetching user data for:", userId);
       
       // 1. Tenta buscar perfil
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle(); 
 
+      if (profileError) {
+        throw profileError; // Joga pro catch para deslogar se der erro de banco
+      }
+
       if (profileData) {
         setProfile(profileData as Profile);
       } else {
-        console.warn("Usuário logado mas sem perfil encontrado.");
+        // Se não tem perfil, cria um log mas não trava o app
+        console.warn("Usuário logado mas sem perfil.");
       }
 
       // 2. Tenta buscar cargo
-      const { data: roleData } = await supabase
+      const { data: roleData, error: roleError } = await supabase
         .rpc('get_user_role', { _user_id: userId });
 
-      if (roleData) {
+      if (roleError) {
+         console.error("Erro ao buscar cargo:", roleError);
+         // Não vamos deslogar por erro de cargo, apenas assume 'user'
+         setRole('user');
+      } else if (roleData) {
         setRole(roleData as UserRole);
       } else {
         setRole('user');
       }
+
     } catch (error) {
-      console.error('Error fetching user data:', error);
-      setRole('user'); // Garante que não quebra o app
+      console.error('ERRO CRÍTICO ao buscar dados do usuário:', error);
+      // AQUI ESTÁ A SOLUÇÃO DO LOOP:
+      // Se deu erro ao buscar os dados, a sessão provavelmente está "suja".
+      // Vamos deslogar para obrigar o usuário a entrar de novo limpo.
+      await forceLogout();
     }
   };
 
-  // --- BUSCA DE DADOS GERAIS (Calendário e Admin) ---
   const refreshData = async () => {
     try {
-      // 1. CALENDÁRIO: Busca reservas (Sempre, para todos)
-      // Removemos o filtro de status cancelado aqui para tratar no front, ou filtramos no select
       const { data: bookingsData } = await supabase
         .from('bookings')
         .select('*')
         .order('booking_date', { ascending: false });
 
-      if (bookingsData) {
-        setBookings(bookingsData as Booking[]);
-      }
+      if (bookingsData) setBookings(bookingsData as Booking[]);
 
-      // 2. ADMIN: Só busca o resto se for admin
       if (role === 'admin') {
         const { data: profilesData } = await supabase
           .from('profiles')
           .select('*')
           .order('name', { ascending: true });
-
         if (profilesData) setProfiles(profilesData as Profile[]);
 
         const { data: expensesData } = await supabase
           .from('expenses')
           .select('*')
           .order('expense_date', { ascending: false });
-
         if (expensesData) setExpenses(expensesData as Expense[]);
       }
     } catch (error) {
@@ -175,15 +193,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // --- EFEITO 1: Inicialização e Auth (Com Loading Seguro) ---
   useEffect(() => {
     let mounted = true;
 
     const initializeAuth = async () => {
       try {
-        setLoading(true); // Garante loading inicial
-        const { data: { session } } = await supabase.auth.getSession();
+        // Pega a sessão inicial sem setar loading(true) ainda para não piscar
+        const { data: { session }, error } = await supabase.auth.getSession();
         
+        if (error) throw error;
+
         if (mounted) {
           setSession(session);
           setUser(session?.user ?? null);
@@ -191,13 +210,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           if (session?.user) {
             await fetchUserData(session.user.id);
           }
+          // Sempre carrega os dados públicos (calendário)
+          await refreshData();
         }
       } catch (error) {
-        console.error("Auth init error:", error);
+        console.error("Erro na inicialização da Auth:", error);
+        await forceLogout();
       } finally {
         if (mounted) {
-            setLoading(false); // <--- OBRIGATÓRIO: Destrava o site
-            refreshData(); // <--- OBRIGATÓRIO: Carrega calendário mesmo sem login
+            setLoading(false); // GARANTE QUE O LOADING PARA
         }
       }
     };
@@ -206,21 +227,29 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (mounted) {
-          setSession(session);
-          setUser(session?.user ?? null);
-          
-          if (session?.user) {
-            setLoading(true);
+        if (!mounted) return;
+
+        // Evita re-processar se for apenas um "TOKEN_REFRESHED" que causa loops
+        if (event === 'TOKEN_REFRESHED') {
+            return;
+        }
+
+        console.log("Evento de Auth:", event);
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+            // Só ativa loading se for um login explícito
+            if (event === 'SIGNED_IN') setLoading(true);
+            
             await fetchUserData(session.user.id);
-            await refreshData(); // Atualiza dados ao logar
-            setLoading(false); // Destrava após carregar user
-          } else {
+            await refreshData();
+            setLoading(false);
+        } else if (event === 'SIGNED_OUT') {
             setProfile(null);
             setRole(null);
-            setLoading(false); // Destrava se deslogar
-            refreshData(); // Mantém calendário atualizado
-          }
+            setLoading(false);
+            refreshData(); 
         }
       }
     );
@@ -231,14 +260,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
   }, []);
 
-  // --- EFEITO 2: Atualiza dados extras se virar Admin ---
   useEffect(() => {
-    if (role === 'admin') {
-      refreshData();
-    }
+    if (role) refreshData();
   }, [role]);
 
-  // --- FUNÇÕES (SignIn restaurado e corrigido) ---
+  // --- ACTIONS ---
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -251,7 +277,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const signUp = async (email: string, password: string, name: string, phone: string, birthDate?: string) => {
     const redirectUrl = `${window.location.origin}/`;
-    console.log("Enviando cadastro:", { email, name, phone, birth_date: birthDate });
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -265,14 +290,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    // Limpeza completa de estado
+    setSession(null);
+    setUser(null);
     setProfile(null);
     setRole(null);
     setProfiles([]);
     setExpenses([]);
-    window.location.href = '/'; // Força recarregar para limpar estados
+    window.location.href = '/';
   };
 
-  // ... (Getters e Actions mantidos iguais) ...
+  // ... (Getters e Actions permanecem iguais)
   const getProfileById = (profileId: string) => profiles.find(p => p.id === profileId);
   const getProfileByUserId = (userId: string) => profiles.find(p => p.user_id === userId);
 
