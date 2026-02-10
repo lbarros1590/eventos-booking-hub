@@ -21,10 +21,10 @@ const Header = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
             <img 
-    src="/favicon.ico"  {/* <-- MUDANÇA AQUI */}
-    alt="EJ Eventos" 
-    className="h-8 w-auto sm:h-10" 
-  />
+              src="/favicon.ico"
+              alt="EJ Eventos" 
+              className="h-8 w-auto sm:h-10" 
+            />
   <span className="text-xl font-bold text-primary sm:text-2xl">
     EJ Eventos
   </span>

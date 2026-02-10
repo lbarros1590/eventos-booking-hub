@@ -1,0 +1,95 @@
+
+> vite_react_shadcn_ts@0.0.0 dev:all
+> concurrently "npm run dev" "npm run dev:server"
+
+[0] 
+[0] > vite_react_shadcn_ts@0.0.0 dev
+[0] > vite
+[0] 
+[1] 
+[1] > vite_react_shadcn_ts@0.0.0 dev:server
+[1] > tsx watch src/server.ts
+[1] 
+[0] Re-optimizing dependencies because vite config has changed
+[0] 
+[0]   [32m[1mVITE[22m v5.4.19[39m  [2mready in [0m[1m479[22m[2m[0m ms[22m
+[0] 
+[0]   [32mÔ×£[39m  [1mLocal[22m:   [36mhttp://localhost:[1m8080[22m/[39m
+[0]   [32mÔ×£[39m  [1mNetwork[22m: [36mhttp://192.168.18.10:[1m8080[22m/[39m
+[0]   [32mÔ×£[39m  [1mNetwork[22m: [36mhttp://172.23.48.1:[1m8080[22m/[39m
+[0] Browserslist: browsers data (caniuse-lite) is 8 months old. Please run:
+[0]   npx update-browserslist-db@latest
+[0]   Why you should do it regularly: https://github.com/browserslist/update-db#readme
+[1] ­ƒÜÇ Servidor rodando na porta 3001
+[1] ­ƒô▒ Inicializando WhatsApp...
+[1] ­ƒöä Conectando ao WhatsApp...
+[0] [33m[vite:css] @import must precede all other statements (besides @charset or empty @layer)
+[0] 5  |  /* EJ Eventos Design System - Pool Blue & Warm Orange Theme */
+[0] 6  |  
+[0] 7  |  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap');
+[0]    |  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[0] 8  |  
+[0] 9  |  @layer base {[39m
+[1] 
+[1] 
+[1] 
+[1] 
+[1] ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+[1] Ô£à WhatsApp conectado com sucesso!
+[1] ­ƒô¿ Pronto para enviar mensagens
+[1] ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+[1] 
+[1] 
+[1] 
+[1] 
+[1] ­ƒöö [API] Notifica├º├úo de reserva recebida
+[1] ­ƒô▒ [API] Enviando notifica├º├úo para: 5565992860607
+[1] ­ƒÆ¼ [API] Cliente: Cliente
+[1] ­ƒôà [API] Data: 18 de fevereiro de 2026
+[1] ­ƒÆ░ [API] Total: R$ 470,00
+[1] ­ƒôñ [API] Enviando mensagem...
+[1] 
+[1] ======================================================================
+[1] ­ƒôñ [WHATSAPP] Tentando enviar mensagem para: 5565992860607
+[1] ======================================================================
+[1] ­ƒöì [DEBUG] Socket conectado: true
+[1] ­ƒöì [DEBUG] Socket user ID: 556592860607:15@s.whatsapp.net
+[1] ­ƒôØ [WHATSAPP] JID destino: 5565992860607@s.whatsapp.net
+[1] ­ƒÆ¼ [WHATSAPP] Mensagem: Ol├í! ­ƒÄë Nova reserva solicitada:
+[1] 
+[1] *Nome do Cliente:* Cliente
+[1] *Data da Reserva:* 18 de fevereiro de 2...
+[1] ­ƒôè [WHATSAPP] Comprimento da mensagem: 173 caracteres
+[1] Closing session: SessionEntry {
+[1]   _chains: {
+[1]     'BUv/3N/IjwN2eOMKGHNqJo/0LcbtlTU7UYBJmKGp+Gg6': { chainKey: [Object], chainType: 1, messageKeys: {} }
+[1]   },
+[1]   registrationId: 997767085,
+[1]   currentRatchet: {
+[1]     ephemeralKeyPair: {
+[1]       pubKey: <Buffer 05 4b ff dc df c8 8f 03 76 78 e3 0a 18 73 6a 26 8f f4 2d c6 ed 95 35 3b 51 80 49 98 a1 a9 f8 68 3a>,
+[1]       privKey: <Buffer 98 87 ec f3 ae 94 fb 62 c1 8d 7a f7 36 29 39 95 af 01 ab 50 31 9f 3e 94 53 d8 2c c1 5a 8d 06 77>
+[1]     },
+[1]     lastRemoteEphemeralKey: <Buffer 05 f8 24 4b 08 42 d8 10 28 eb 60 dc d9 a0 d7 88 15 99 cf 61 dc ca 25 4d e6 45 5e d0 56 83 6b 80 2e>,
+[1]     previousCounter: 0,
+[1]     rootKey: <Buffer 5e df 23 c1 df b8 ab d0 ff d8 a0 72 dd 11 ef 48 9e 04 fa 4d 12 b5 39 21 42 47 41 05 30 35 fb 12>
+[1]   },
+[1]   indexInfo: {
+[1]     baseKey: <Buffer 05 a2 65 9d d3 cb 2f 29 59 af 5f 1c ab 44 d0 d9 f0 eb 44 1b 64 48 c5 88 b3 c4 a6 f6 aa 9e ed 10 2d>,
+[1]     baseKeyType: 1,
+[1]     closed: -1,
+[1]     used: 1770691137479,
+[1]     created: 1770691137479,
+[1]     remoteIdentityKey: <Buffer 05 e3 52 fa f5 1c 39 29 f7 99 ac 42 46 b7 21 3c 77 17 04 0b 1d 29 cf 32 a8 6b 74 56 97 d3 02 7e 25>
+[1]   },
+[1]   pendingPreKey: {
+[1]     signedKeyId: 16336911,
+[1]     baseKey: <Buffer 05 a2 65 9d d3 cb 2f 29 59 af 5f 1c ab 44 d0 d9 f0 eb 44 1b 64 48 c5 88 b3 c4 a6 f6 aa 9e ed 10 2d>,
+[1]     preKeyId: 9290849
+[1]   }
+[1] }
+[1] Ô£à [WHATSAPP] Mensagem enviada com sucesso!
+[1] ­ƒôª [WHATSAPP] ID da mensagem: 3EB0E513133B3B01DE4082
+[1] ======================================================================
+[1] 
+[1] Ô£à [API] Notifica├º├úo enviada com sucesso

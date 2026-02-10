@@ -15,11 +15,41 @@ import { cn } from '@/lib/utils';
 
 const LOYALTY_THRESHOLD = 4;
 
+// Função para enviar notificação WhatsApp em segundo plano
+const sendWhatsappNotification = async (clientName: string, bookingDate: string, total: number) => {
+  try {
+    console.log('📤 Enviando notificação WhatsApp...', { clientName, bookingDate, total });
+    const backendUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://seu-dominio.com'
+      : 'http://localhost:3001';
+    
+    const response = await fetch(`${backendUrl}/api/send-whatsapp-notification`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        clientName,
+        bookingDate,
+        total,
+      }),
+    });
+
+    const data = await response.json();
+    console.log('✅ Resposta da API:', data);
+
+    if (!response.ok) {
+      console.error('❌ Erro ao enviar notificação:', response.statusText, data);
+    }
+  } catch (error) {
+    console.error('❌ Erro na requisição de notificação:', error);
+  }
+};
+
 const NewReservation = () => {
   const { profile, isDateBooked, createBooking } = useApp();
   const { settings, calendarExceptions, calculatePriceForDate, isDateBlocked, loading } = useVenueSettings();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
-  const [checklistConfirmed, setChecklistConfirmed] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
@@ -42,7 +72,7 @@ const NewReservation = () => {
   };
 
   const handleSubmit = async () => {
-    if (!selectedDate || !priceInfo) return;
+    if (!selectedDate || !priceInfo || !profile) return;
 
     setSubmitting(true);
 
@@ -52,7 +82,7 @@ const NewReservation = () => {
       cleaning_fee: priceInfo.cleaningFee,
       total_price: priceInfo.total,
       status: 'pending',
-      checklist_confirmed: checklistConfirmed,
+      checklist_confirmed: true,
       terms_accepted: termsAccepted,
       deposit_paid: false,
       final_balance_paid: false,
@@ -67,16 +97,25 @@ const NewReservation = () => {
     if (error) {
       toast.error('Erro ao criar reserva. Tente novamente.');
     } else {
+      // Enviar mensagem WhatsApp para a proprietária em segundo plano
+      const clientName = profile.full_name || 'Cliente';
+      const bookingDate = format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+      const whatsappMessage = `Olá! Nova reserva solicitada:\n\n*Nome do Cliente:* ${clientName}\n*Data da Reserva:* ${bookingDate}\n*Valor Total:* R$ ${priceInfo.total},00\n\nPor favor, entre em contato para confirmar.`;
+      
+      // Chamar API em segundo plano (não aguarda a resposta)
+      sendWhatsappNotification(clientName, bookingDate, priceInfo.total).catch(err => {
+        console.error('Erro ao enviar notificação WhatsApp:', err);
+      });
+
       toast.success('Reserva solicitada com sucesso! Aguarde a confirmação.');
       setSelectedDate(undefined);
-      setChecklistConfirmed(false);
       setTermsAccepted(false);
     }
 
     setSubmitting(false);
   };
 
-  const isFormValid = selectedDate && checklistConfirmed && termsAccepted;
+  const isFormValid = selectedDate && termsAccepted;
 
   const isVideo = (url: string) => {
     return url.toLowerCase().endsWith('.mp4') || url.toLowerCase().endsWith('.webm');
@@ -177,146 +216,124 @@ const NewReservation = () => {
         </div>
       )}
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid lg:grid-cols-1 gap-6">
         {/* Calendar */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CalendarDays className="w-5 h-5 text-primary" />
-              1. Escolha a Data
+              Escolha a Data
             </CardTitle>
             <CardDescription>
               Datas em vermelho estão indisponíveis
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={handleDateSelect}
-              disabled={(date) => {
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                return date < today || isDateBooked(date) || isDateBlocked(date);
-              }}
-              modifiers={{
-                booked: (date) => isDateBooked(date),
-                blocked: (date) => isDateBlocked(date),
-              }}
-              modifiersStyles={{
-                booked: { backgroundColor: 'hsl(var(--destructive))', color: 'white' },
-                blocked: { backgroundColor: 'hsl(var(--muted))', color: 'hsl(var(--muted-foreground))', textDecoration: 'line-through' },
-              }}
-              className="rounded-md border w-full pointer-events-auto"
-              locale={ptBR}
-            />
-
-            {selectedDate && priceInfo && (
-              <div className="mt-4 p-4 bg-primary/5 rounded-xl space-y-2">
-                <p className="font-medium text-foreground">
-                  Data selecionada: {format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                </p>
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Diária:</span>
-                    <span>R$ {priceInfo.basePrice},00</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Taxa de limpeza:</span>
-                    <span>R$ {priceInfo.cleaningFee},00</span>
-                  </div>
-                  {profile?.has_discount && (
-                    <div className="flex justify-between text-accent">
-                      <span>Desconto fidelidade (20%):</span>
-                      <span>- R$ {Math.round((priceInfo.basePrice + priceInfo.cleaningFee) * 0.2)},00</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between font-bold text-lg pt-2 border-t border-border">
-                    <span>Total:</span>
-                    <span className="text-primary">R$ {priceInfo.total},00</span>
-                  </div>
-                  <div className="flex justify-between text-sm pt-2 border-t border-border">
-                    <span className="text-muted-foreground">Sinal (50%):</span>
-                    <span className="font-semibold text-accent">R$ {priceInfo.deposit},00</span>
-                  </div>
-                </div>
-              </div>
-            )}
+            <div className="space-y-4 mb-6">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={handleDateSelect}
+                disabled={(date) => {
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  return date < today || isDateBooked(date) || isDateBlocked(date);
+                }}
+                modifiers={{
+                  booked: (date) => isDateBooked(date),
+                  blocked: (date) => isDateBlocked(date),
+                }}
+                modifiersStyles={{
+                  booked: { backgroundColor: 'hsl(var(--destructive))', color: 'white' },
+                  blocked: { backgroundColor: 'hsl(var(--muted))', color: 'hsl(var(--muted-foreground))', textDecoration: 'line-through' },
+                }}
+                className="rounded-md border w-full pointer-events-auto"
+                locale={ptBR}
+              />
+            </div>
           </CardContent>
         </Card>
 
-        {/* Checklist */}
-        <Card className={cn(!selectedDate && 'opacity-50 pointer-events-none')}>
+        {/* Form Section */}
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Check className="w-5 h-5 text-primary" />
-              2. Confira os Itens
+              Confirmar Reserva
             </CardTitle>
             <CardDescription>
-              O espaço inclui os seguintes itens
+              Revise os dados e confirme sua reserva
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              {amenities.map((amenity) => {
-                const Icon = getIcon(amenity.icon);
-                return (
-                  <div
-                    key={amenity.id}
-                    className="flex items-center gap-2 p-2 bg-secondary rounded-lg"
-                  >
-                    <Icon className="w-4 h-4 text-primary" />
-                    <span className="text-sm text-foreground">{amenity.name}</span>
+            <div className="space-y-4">
+              {selectedDate && priceInfo && (
+                <div className="p-4 bg-primary/5 rounded-xl space-y-2">
+                  <p className="font-medium text-foreground">
+                    Data selecionada: {format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                  </p>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Diária:</span>
+                      <span>R$ {priceInfo.basePrice},00</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Taxa de limpeza:</span>
+                      <span>R$ {priceInfo.cleaningFee},00</span>
+                    </div>
+                    {profile?.has_discount && (
+                      <div className="flex justify-between text-accent">
+                        <span>Desconto fidelidade (20%):</span>
+                        <span>- R$ {Math.round((priceInfo.basePrice + priceInfo.cleaningFee) * 0.2)},00</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-bold text-lg pt-2 border-t border-border">
+                      <span>Total:</span>
+                      <span className="text-primary">R$ {priceInfo.total},00</span>
+                    </div>
+                    <div className="flex justify-between text-sm pt-2 border-t border-border">
+                      <span className="text-muted-foreground">Sinal (50%):</span>
+                      <span className="font-semibold text-accent">R$ {priceInfo.deposit},00</span>
+                    </div>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              )}
 
-            <div className="space-y-4 border-t border-border pt-4">
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="checklist"
-                  checked={checklistConfirmed}
-                  onCheckedChange={(checked) => setChecklistConfirmed(checked as boolean)}
-                />
-                <Label htmlFor="checklist" className="text-sm leading-relaxed cursor-pointer">
-                  Confirmo que revisei todos os itens do espaço listados acima
-                </Label>
+              <div className="space-y-3 border-t border-border pt-4">
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="terms"
+                    checked={termsAccepted}
+                    onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
+                  />
+                  <Label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer">
+                    Li e aceito os termos de uso do espaço. Me comprometo a devolver o espaço
+                    nas mesmas condições em que o recebi.
+                  </Label>
+                </div>
               </div>
 
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="terms"
-                  checked={termsAccepted}
-                  onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
-                />
-                <Label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer">
-                  Li e aceito os termos de uso do espaço. Me comprometo a devolver o espaço
-                  nas mesmas condições em que o recebi.
-                </Label>
+              <div className="p-4 bg-muted rounded-xl flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-muted-foreground">
+                  <p className="font-medium text-foreground mb-1">Importante:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>Duração do evento: 12 horas</li>
+                    <li>{settings?.payment_terms_text || '50% no ato da reserva, 50% na entrega das chaves.'}</li>
+                    <li>Cancelamento gratuito até 7 dias antes</li>
+                  </ul>
+                </div>
               </div>
-            </div>
 
-            <div className="mt-6 p-4 bg-muted rounded-xl flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-muted-foreground">
-                <p className="font-medium text-foreground mb-1">Importante:</p>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Duração do evento: 12 horas</li>
-                  <li>{settings?.payment_terms_text || '50% no ato da reserva, 50% na entrega das chaves.'}</li>
-                  <li>Cancelamento gratuito até 7 dias antes</li>
-                </ul>
-              </div>
+              <Button
+                className="w-full bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-primary"
+                size="lg"
+                disabled={!isFormValid || submitting}
+                onClick={handleSubmit}
+              >
+                {submitting ? 'Processando...' : 'Solicitar Reserva'}
+              </Button>
             </div>
-
-            <Button
-              className="w-full mt-6 bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-primary"
-              size="lg"
-              disabled={!isFormValid || submitting}
-              onClick={handleSubmit}
-            >
-              {submitting ? 'Processando...' : 'Solicitar Reserva'}
-            </Button>
           </CardContent>
         </Card>
       </div>
