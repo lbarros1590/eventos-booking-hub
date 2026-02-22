@@ -19,7 +19,13 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'robots.txt', 'logo-novo.png'],
+      workbox: {
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,json}']
+      },
+      includeAssets: ['favicon.ico', 'robots.txt', 'logo-novo.png', 'logo-192.png', 'logo-512.png'],
       manifest: {
         name: 'EJ Eventos',
         short_name: 'EJ Eventos',
@@ -28,7 +34,8 @@ export default defineConfig(({ mode }) => ({
         background_color: '#ffffff',
         display: 'standalone',
         display_override: ['window-controls-overlay', 'standalone', 'minimal-ui'],
-        start_url: '/',
+        start_url: '.',
+        scope: '/',
         orientation: 'portrait-primary',
         icons: [
           {
@@ -40,7 +47,13 @@ export default defineConfig(({ mode }) => ({
             src: '/logo-512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable'
+            purpose: 'any'
+          },
+          {
+            src: '/logo-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
           }
         ]
       }
