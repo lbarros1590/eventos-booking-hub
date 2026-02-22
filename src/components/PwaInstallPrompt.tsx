@@ -36,9 +36,11 @@ export const PwaInstallPrompt = () => {
     const handleInstallClick = async () => {
         if (!installPrompt) {
             if (isIOS) {
-                toast.info('Para instalar no iPhone: Toque em "Compartilhar" e depois em "Adicionar à Tela de Início".', { duration: 6000 });
+                toast.info('No iPhone: Toque em "Compartilhar" (quadradinho com seta para cima) na barra inferior e depois em "Adicionar à Tela de Início".', { duration: 8000 });
+            } else if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+                toast.error('A instalação automática do PWA exige uma conexão segura (HTTPS). Se você estiver testando pela rede local (HTTP), o navegador bloqueará a instalação.');
             } else {
-                toast.info('O aplicativo já está instalado ou seu navegador não suporta a instalação automática.');
+                toast.info('O aplicativo já está instalado, ou ainda está carregando os arquivos, ou seu navegador não suporta a instalação automática do PWA. Tente pelo Chrome ou Safári.');
             }
             return;
         }

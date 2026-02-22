@@ -19,6 +19,9 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: 'autoUpdate',
+      devOptions: {
+        enabled: true
+      },
       includeAssets: ['favicon.ico', 'robots.txt', 'logo-novo.png'],
       manifest: {
         name: 'EJ Eventos',
