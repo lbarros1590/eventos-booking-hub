@@ -20,9 +20,10 @@ const LOYALTY_THRESHOLD = 4;
 const sendWhatsappNotification = async (clientName: string, bookingDate: string, total: number) => {
   try {
     console.log('📤 Enviando notificação WhatsApp...', { clientName, bookingDate, total });
-    const backendUrl = process.env.NODE_ENV === 'production'
+    const backendUrl = import.meta.env.PROD
       ? 'https://seu-dominio.com'
       : 'http://localhost:3001';
+
 
     const response = await fetch(`${backendUrl}/api/send-whatsapp-notification`, {
       method: 'POST',

@@ -46,7 +46,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setRole(null);
     setLoading(false);
     if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
-        window.location.href = '/';
+      window.location.href = '/';
     }
   };
 
@@ -56,7 +56,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
-        .maybeSingle(); 
+        .maybeSingle();
 
       if (profileError) throw profileError;
 
@@ -64,12 +64,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setProfile(profileData as Profile);
       }
 
-      const { data: roleData, error: roleError } = await supabase
+      const { data: roleData, error: roleError } = await (supabase as any)
         .rpc('get_user_role', { _user_id: userId });
 
       if (roleError) {
-         console.error("Erro ao buscar cargo:", roleError);
-         setRole('user');
+        console.error("Erro ao buscar cargo:", roleError);
+        setRole('user');
       } else {
         setRole((roleData as UserRole) || 'user');
       }
@@ -83,44 +83,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     let mounted = true;
 
-    const initializeAuth = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
+    const handleAuthEvent = async (event: string, session: Session | null) => {
+      if (!mounted) return;
 
-        if (mounted) {
-          setSession(session);
-          setUser(session?.user ?? null);
-          if (session?.user) await fetchUserData(session.user.id);
-        }
-      } catch (error) {
-        console.error("Erro na inicialização da Auth:", error);
-        await forceLogout();
-      } finally {
-        if (mounted) setLoading(false);
+      if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') return;
+
+      console.log(`[AUTH] Event: ${event}`, { userId: session?.user?.id });
+
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      if (session?.user) {
+        await fetchUserData(session.user.id);
+      } else {
+        setProfile(null);
+        setRole(null);
       }
+
+      if (mounted) setLoading(false);
     };
 
-    initializeAuth();
-
+    // Unificamos a inicialização: deixamos o onAuthStateChange cuidar do estado inicial
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (!mounted) return;
-
-        if (event === 'TOKEN_REFRESHED') return;
-
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-            if (event === 'SIGNED_IN') setLoading(true);
-            await fetchUserData(session.user.id);
-            setLoading(false);
-        } else if (event === 'SIGNED_OUT') {
-            setProfile(null);
-            setRole(null);
-            setLoading(false);
-        }
+      (event, session) => {
+        handleAuthEvent(event, session);
       }
     );
 
@@ -132,10 +118,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signIn = async (email: string, password: string) => {
     try {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        return { error };
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      return { error };
     } catch (e: any) {
-        return { error: e };
+      return { error: e };
     }
   };
 
@@ -162,9 +148,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   return (
     <AuthContext.Provider value={{
-        user, session, profile, role, loading,
-        signIn, signUp, signOut, refreshUserData: () => user ? fetchUserData(user.id) : Promise.resolve()
-      }}>
+      user, session, profile, role, loading,
+      signIn, signUp, signOut, refreshUserData: () => user ? fetchUserData(user.id) : Promise.resolve()
+    }}>
       {children}
     </AuthContext.Provider>
   );
