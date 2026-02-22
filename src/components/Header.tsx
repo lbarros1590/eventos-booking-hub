@@ -4,6 +4,7 @@ import { BUSINESS_INFO } from '@/lib/constants';
 import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { PwaInstallPrompt } from '@/components/PwaInstallPrompt';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -48,6 +49,7 @@ const Header = () => {
 
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center gap-3">
+            <PwaInstallPrompt />
             {user ? (
               <>
                 <Link to={role === 'admin' ? '/admin' : '/dashboard'}>
@@ -142,6 +144,9 @@ const Header = () => {
                     </Link>
                   </>
                 )}
+              </div>
+              <div className="px-4 pb-4">
+                <PwaInstallPrompt />
               </div>
             </nav>
           </div>
