@@ -27,6 +27,14 @@
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
+  <script>
+    window.addEventListener('beforeinstallprompt', (e) => {
+      console.log('✅ PWA: Evento beforeinstallprompt disparado globalmente!');
+    });
+    window.addEventListener('appinstalled', () => {
+      console.log('✅ PWA: O Aplicativo foi instalado com sucesso!');
+    });
+  </script>
 </body>
 
 </html>

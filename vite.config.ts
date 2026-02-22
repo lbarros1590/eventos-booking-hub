@@ -39,7 +39,8 @@ export default defineConfig(({ mode }) => ({
           {
             src: '/logo-novo.png',
             sizes: '512x512',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any maskable'
           }
         ]
       }
