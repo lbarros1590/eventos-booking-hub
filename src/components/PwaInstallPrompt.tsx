@@ -61,7 +61,7 @@ export const PwaInstallPrompt = () => {
             variant="outline"
             size="sm"
             onClick={handleInstallClick}
-            className="hidden sm:flex items-center gap-2 border-primary/20 hover:bg-primary/5 text-primary"
+            className="flex w-full justify-center md:w-auto items-center gap-2 border-primary/20 hover:bg-primary/5 text-primary"
         >
             <Download className="w-4 h-4" />
             <span>Instalar App</span>
