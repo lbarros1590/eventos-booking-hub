@@ -1,5 +1,6 @@
 import express from 'express';
 import { sendTextMessage, isWhatsAppConnected, initializeWhatsApp } from '../services/whatsappService';
+import { getOwnerPhoneNumber } from '../services/serverSettingsService';
 
 const router = express.Router();
 
@@ -8,7 +9,7 @@ router.post('/send-whatsapp', async (req, res) => {
   try {
     console.log('\n🔔 [API] Requisição de envio de mensagem recebida');
     console.log('📦 [API] Body:', req.body);
-    
+
     const { phoneNumber, message } = req.body;
 
     if (!phoneNumber || !message) {
@@ -58,7 +59,7 @@ router.post('/send-whatsapp', async (req, res) => {
 router.post('/send-whatsapp-notification', async (req, res) => {
   try {
     console.log('\n🔔 [API] Notificação de reserva recebida');
-    
+
     const { clientName, bookingDate, total } = req.body;
 
     if (!clientName || !bookingDate || total === undefined) {
@@ -69,9 +70,9 @@ router.post('/send-whatsapp-notification', async (req, res) => {
       });
     }
 
-    // Número da proprietária
-    const phoneNumber = '5565992860607';
-    
+    // Buscar número da proprietária do banco de dados
+    const phoneNumber = await getOwnerPhoneNumber();
+
     // Formatar mensagem
     const message = `Olá! 🎉 Nova reserva solicitada:\n\n*Nome do Cliente:* ${clientName}\n*Data da Reserva:* ${bookingDate}\n*Valor Total:* R$ ${total},00\n\nPor favor, entre em contato para confirmar.`;
 

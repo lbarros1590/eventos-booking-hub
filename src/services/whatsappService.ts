@@ -36,7 +36,7 @@ export async function initializeWhatsApp() {
 
   try {
     const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
-    
+
     const { default: makeWASocket, fetchLatestBaileysVersion } = Baileys;
 
     const { version } = await fetchLatestBaileysVersion();
@@ -61,7 +61,7 @@ export async function initializeWhatsApp() {
         console.log('║  ⚙️  Configurações → Aparelhos conectados → Conectar          ║');
         console.log('║                                                             ║');
         console.log('╚═════════════════════════════════════════════════════════════╝\n');
-        
+
         // Salvar QR code como arquivo PNG
         const qrPath = path.join(process.cwd(), 'qrcode.png');
         QRCode.toFile(
@@ -126,55 +126,100 @@ export async function initializeWhatsApp() {
   }
 }
 
+interface QueuedMessage {
+  phoneNumber: string;
+  message: string;
+  resolve: (value: boolean) => void;
+  reject: (reason: any) => void;
+  attempts: number;
+}
+
+let messageQueue: QueuedMessage[] = [];
+let isProcessingQueue = false;
+const MAX_ATTEMPTS = 3;
+
 /**
- * Envia uma mensagem de texto para um contato
+ * Adiciona uma mensagem à fila e inicia o processamento se necessário
  */
 export async function sendTextMessage(
   phoneNumber: string,
   message: string
 ): Promise<boolean> {
-  try {
-    console.log(`\n${'='.repeat(70)}`);
-    console.log(`📤 [WHATSAPP] Tentando enviar mensagem para: ${phoneNumber}`);
-    console.log(`${'='.repeat(70)}`);
-    
-    console.log(`🔍 [DEBUG] Socket conectado: ${!!socket?.user}`);
-    console.log(`🔍 [DEBUG] Socket user ID: ${socket?.user?.id || 'N/A'}`);
-    
-    if (!socket?.user) {
-      console.log('⚠️  [WHATSAPP] Socket não está conectado, tentando conectar...');
-      await initializeWhatsApp();
+  return new Promise((resolve, reject) => {
+    messageQueue.push({
+      phoneNumber,
+      message,
+      resolve,
+      reject,
+      attempts: 0
+    });
+
+    if (!isProcessingQueue) {
+      processQueue();
     }
+  });
+}
 
-    if (!socket?.user) {
-      console.error('❌ [WHATSAPP] WhatsApp não conectado após inicialização');
-      throw new Error('WhatsApp não conectado');
+/**
+ * Processa a fila de mensagens sequencialmente
+ */
+async function processQueue() {
+  if (isProcessingQueue || messageQueue.length === 0) return;
+
+  isProcessingQueue = true;
+
+  while (messageQueue.length > 0) {
+    const item = messageQueue[0];
+
+    try {
+      console.log(`\n${'='.repeat(70)}`);
+      console.log(`📤 [WHATSAPP] Processando fila - Destino: ${item.phoneNumber}`);
+      console.log(`📊 [WHATSAPP] Mensagens restantes na fila: ${messageQueue.length - 1}`);
+
+      if (!socket?.user) {
+        console.log('⚠️  [WHATSAPP] Socket não está conectado, tentando conectar...');
+        await initializeWhatsApp();
+      }
+
+      if (!socket?.user) {
+        throw new Error('WhatsApp não conectado');
+      }
+
+      // Esperar um pequeno intervalo entre mensagens para evitar spam/bloqueio
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      const jid = item.phoneNumber.includes('@s.whatsapp.net')
+        ? item.phoneNumber
+        : `${item.phoneNumber}@s.whatsapp.net`;
+
+      const result = await socket.sendMessage(jid, { text: item.message });
+
+      console.log(`✅ [WHATSAPP] Mensagem enviada com sucesso!`);
+      console.log(`📦 [WHATSAPP] ID: ${result?.key?.id}`);
+      console.log(`${'='.repeat(70)}\n`);
+
+      item.resolve(true);
+      messageQueue.shift(); // Remove da fila após sucesso
+    } catch (error: any) {
+      item.attempts++;
+      console.error(`❌ [WHATSAPP] Erro ao enviar mensagem (Tentativa ${item.attempts}/${MAX_ATTEMPTS}):`, error.message);
+
+      if (item.attempts >= MAX_ATTEMPTS) {
+        console.error(`💀 [WHATSAPP] Máximo de tentativas atingido para ${item.phoneNumber}`);
+        item.resolve(false);
+        messageQueue.shift();
+      } else {
+        // Se falhou por conexão, limpa o socket para forçar reconexão na próxima tentativa
+        if (error.message.includes('não conectado') || error.message.includes('closed')) {
+          socket = null;
+        }
+        // Espera um pouco mais antes de tentar o mesmo item novamente
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
     }
-
-    // Formatar número para o padrão do WhatsApp (adicionar @s.whatsapp.net)
-    const jid = phoneNumber.includes('@s.whatsapp.net')
-      ? phoneNumber
-      : `${phoneNumber}@s.whatsapp.net`;
-
-    console.log(`📝 [WHATSAPP] JID destino: ${jid}`);
-    console.log(`💬 [WHATSAPP] Mensagem: ${message.substring(0, 100)}...`);
-    console.log(`📊 [WHATSAPP] Comprimento da mensagem: ${message.length} caracteres`);
-    
-    const result = await socket.sendMessage(jid, { text: message });
-    
-    console.log(`✅ [WHATSAPP] Mensagem enviada com sucesso!`);
-    console.log(`📦 [WHATSAPP] ID da mensagem: ${result?.key?.id || 'desconhecido'}`);
-    console.log(`${'='.repeat(70)}\n`);
-    return true;
-  } catch (error: any) {
-    console.error(`${'='.repeat(70)}`);
-    console.error(`❌ [WHATSAPP] ERRO ao enviar mensagem!`);
-    console.error(`❌ [WHATSAPP] Código de erro: ${error?.code || 'desconhecido'}`);
-    console.error(`❌ [WHATSAPP] Mensagem de erro: ${error?.message || error}`);
-    console.error(`❌ [WHATSAPP] Stack: ${error?.stack || 'N/A'}`);
-    console.error(`${'='.repeat(70)}\n`);
-    return false;
   }
+
+  isProcessingQueue = false;
 }
 
 /**
@@ -189,7 +234,8 @@ export function isWhatsAppConnected(): boolean {
  */
 export async function disconnectWhatsApp() {
   if (socket) {
-    await socket.end();
+    await socket.end(undefined);
     socket = null;
   }
 }
+
