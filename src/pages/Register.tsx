@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { ArrowLeft, UserPlus, AlertCircle } from 'lucide-react';
 import { differenceInYears, parseISO } from 'date-fns';
@@ -17,7 +17,7 @@ const Register = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signUp } = useApp();
+  const { signUp } = useAuth();
   const navigate = useNavigate();
 
   const calculateAge = (dateString: string): number => {
@@ -53,7 +53,7 @@ const Register = () => {
     setLoading(true);
 
     const { error } = await signUp(email, password, name, phone, birthDate);
-    
+
     if (error) {
       if (error.message.includes('already registered')) {
         toast.error('Este email já está cadastrado. Tente fazer login.');

@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { useApp, Profile } from '@/contexts/AppContext';
+import { useAuth, Profile } from '@/contexts/AuthContext';
+import { useData } from '@/contexts/DataContext';
 import { useVenueSettings } from '@/hooks/useVenueSettings';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -25,15 +26,15 @@ const ManualReservationModal = ({
   selectedDate,
   onSuccess,
 }: ManualReservationModalProps) => {
-  const { profiles, createManualBooking, createManualClient, refreshData } = useApp();
+  const { profiles, createManualBooking, createManualClient, refreshData } = useData();
   const { calculatePriceForDate } = useVenueSettings();
-  
+
   const [selectedProfileId, setSelectedProfileId] = useState<string>('');
   const [customPrice, setCustomPrice] = useState<string>('');
   const [depositReceived, setDepositReceived] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<string>('');
   const [loading, setLoading] = useState(false);
-  
+
   // Quick client creation
   const [showNewClient, setShowNewClient] = useState(false);
   const [newClientName, setNewClientName] = useState('');
@@ -107,10 +108,10 @@ const ManualReservationModal = ({
     }
 
     const price = parseFloat(customPrice) || priceInfo?.total || 0;
-    
+
     // Status is determined by deposit payment
     const status = depositReceived ? 'confirmed' : 'pending';
-    
+
     setLoading(true);
     const result = await createManualBooking({
       profile_id: selectedProfileId,

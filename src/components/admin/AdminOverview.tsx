@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useData } from '@/contexts/DataContext';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -12,7 +13,7 @@ import {
 } from 'lucide-react';
 
 const AdminOverview = () => {
-  const { bookings, expenses, profiles } = useApp();
+  const { bookings, expenses, profiles } = useData();
 
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
@@ -169,11 +170,10 @@ const AdminOverview = () => {
                   className="flex items-center justify-between p-3 bg-secondary rounded-lg"
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${
-                      booking.status === 'confirmed' ? 'bg-success' :
+                    <div className={`w-2 h-2 rounded-full ${booking.status === 'confirmed' ? 'bg-success' :
                       booking.status === 'pending' ? 'bg-warning' :
-                      booking.status === 'completed' ? 'bg-primary' : 'bg-muted-foreground'
-                    }`} />
+                        booking.status === 'completed' ? 'bg-primary' : 'bg-muted-foreground'
+                      }`} />
                     <div>
                       <p className="font-medium text-foreground text-sm">
                         {getUserName(booking.user_id)}

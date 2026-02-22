@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useApp, Expense } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useData, Expense } from '@/contexts/DataContext';
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isWithinInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -47,12 +48,12 @@ const MONTHS = [
 const YEARS = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
 
 const AdminFinancial = () => {
-  const { bookings, expenses, profiles, addExpense, updateExpense, deleteExpense } = useApp();
-  
+  const { bookings, expenses, profiles, addExpense, updateExpense, deleteExpense } = useData();
+
   // Filter state
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  
+
   // Form state
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
@@ -60,7 +61,7 @@ const AdminFinancial = () => {
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
-  
+
   // Edit modal state
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -90,10 +91,10 @@ const AdminFinancial = () => {
       let received = 0;
       const total = Number(b.total_price);
       const deposit = Math.round(total / 2);
-      
+
       if (b.deposit_paid) received += deposit;
       if (b.final_balance_paid) received += (total - deposit);
-      
+
       return sum + received;
     }, 0);
   }, [monthlyBookings]);
@@ -104,10 +105,10 @@ const AdminFinancial = () => {
       const total = Number(b.total_price);
       const deposit = Math.round(total / 2);
       let pending = 0;
-      
+
       if (!b.deposit_paid) pending += deposit;
       if (!b.final_balance_paid) pending += (total - deposit);
-      
+
       return sum + pending;
     }, 0);
   }, [monthlyBookings]);
@@ -123,9 +124,9 @@ const AdminFinancial = () => {
     return MONTHS.map((month) => {
       const monthBookings = bookings.filter((b) => {
         const bookingDate = parseISO(b.booking_date);
-        return bookingDate.getMonth() === month.value && 
-               bookingDate.getFullYear() === selectedYear && 
-               b.status !== 'cancelled';
+        return bookingDate.getMonth() === month.value &&
+          bookingDate.getFullYear() === selectedYear &&
+          b.status !== 'cancelled';
       });
 
       const monthExpenses = expenses.filter((e) => {
@@ -160,7 +161,7 @@ const AdminFinancial = () => {
 
     return days.map((day) => {
       const dayStr = day.toISOString().split('T')[0];
-      
+
       const dayBookings = bookings.filter((b) => {
         return b.booking_date === dayStr && b.status !== 'cancelled';
       });
@@ -222,7 +223,7 @@ const AdminFinancial = () => {
 
   const handleSaveEdit = async () => {
     if (!editingExpense) return;
-    
+
     setLoading(true);
     await updateExpense(editingExpense.id, {
       description: editingExpense.description,
@@ -231,7 +232,7 @@ const AdminFinancial = () => {
       expense_date: editingExpense.expense_date,
       payment_date: editingExpense.payment_date,
     });
-    
+
     toast.success('Despesa atualizada');
     setEditModalOpen(false);
     setEditingExpense(null);
@@ -285,8 +286,8 @@ const AdminFinancial = () => {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 bg-secondary rounded-lg p-1">
             <Calendar className="w-4 h-4 text-muted-foreground ml-2" />
-            <Select 
-              value={selectedMonth.toString()} 
+            <Select
+              value={selectedMonth.toString()}
               onValueChange={(v) => setSelectedMonth(parseInt(v))}
             >
               <SelectTrigger className="w-32 border-0 bg-transparent">
@@ -300,8 +301,8 @@ const AdminFinancial = () => {
                 ))}
               </SelectContent>
             </Select>
-            <Select 
-              value={selectedYear.toString()} 
+            <Select
+              value={selectedYear.toString()}
               onValueChange={(v) => setSelectedYear(parseInt(v))}
             >
               <SelectTrigger className="w-20 border-0 bg-transparent">
@@ -416,27 +417,27 @@ const AdminFinancial = () => {
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                   <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))', 
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
                       border: '1px solid hsl(var(--border))',
                       borderRadius: '8px',
                     }}
                     formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR')}`, '']}
                   />
                   <Legend />
-                  <Line 
-                    type="monotone" 
-                    dataKey="receitas" 
-                    stroke="hsl(var(--success))" 
+                  <Line
+                    type="monotone"
+                    dataKey="receitas"
+                    stroke="hsl(var(--success))"
                     strokeWidth={2}
                     name="Receitas"
                     dot={{ fill: 'hsl(var(--success))' }}
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="despesas" 
-                    stroke="hsl(var(--destructive))" 
+                  <Line
+                    type="monotone"
+                    dataKey="despesas"
+                    stroke="hsl(var(--destructive))"
                     strokeWidth={2}
                     name="Despesas"
                     dot={{ fill: 'hsl(var(--destructive))' }}
@@ -460,17 +461,17 @@ const AdminFinancial = () => {
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={10} />
                   <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))', 
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
                       border: '1px solid hsl(var(--border))',
                       borderRadius: '8px',
                     }}
                     formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR')}`, 'Valor']}
                   />
-                  <Bar 
-                    dataKey="valor" 
-                    fill="hsl(var(--primary))" 
+                  <Bar
+                    dataKey="valor"
+                    fill="hsl(var(--primary))"
                     radius={[4, 4, 0, 0]}
                   />
                 </BarChart>
@@ -573,12 +574,12 @@ const AdminFinancial = () => {
                   let received = 0;
                   if (booking.deposit_paid) received += deposit;
                   if (booking.final_balance_paid) received += (total - deposit);
-                  
+
                   // Get client name from profile_id or user_id
-                  const clientName = booking.profile_id 
+                  const clientName = booking.profile_id
                     ? getProfileName(booking.profile_id)
                     : getUserName(booking.user_id);
-                  
+
                   return (
                     <div
                       key={booking.id}
@@ -709,8 +710,8 @@ const AdminFinancial = () => {
                 </div>
                 <div className="space-y-2">
                   <Label>Categoria</Label>
-                  <Select 
-                    value={editingExpense.category} 
+                  <Select
+                    value={editingExpense.category}
                     onValueChange={(v) => setEditingExpense({ ...editingExpense, category: v as Expense['category'] })}
                   >
                     <SelectTrigger>

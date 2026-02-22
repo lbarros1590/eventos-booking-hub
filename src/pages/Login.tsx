@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { ArrowLeft, LogIn } from 'lucide-react';
 
@@ -12,7 +12,7 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, user, role } = useApp();
+  const { signIn, user, role } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already logged in
@@ -27,7 +27,7 @@ const Login = () => {
     setLoading(true);
 
     const { error } = await signIn(email, password);
-    
+
     if (error) {
       toast.error(error.message || 'Erro ao fazer login. Verifique suas credenciais.');
       setLoading(false);

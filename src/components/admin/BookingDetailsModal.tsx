@@ -6,13 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { Booking, Profile } from '@/contexts/AppContext';
+import { Profile } from '@/contexts/AuthContext';
+import { Booking } from '@/contexts/DataContext';
 import { ChecklistItem, useVenueSettings } from '@/hooks/useVenueSettings';
 import { useInventory } from '@/hooks/useInventory';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { 
-  User, Phone, DollarSign, CheckCircle, XCircle, Loader2, 
+import {
+  User, Phone, DollarSign, CheckCircle, XCircle, Loader2,
   Printer, Plus, Trash2, Edit2, Receipt
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -52,7 +53,7 @@ const BookingDetailsModal = ({
       setFinalBalancePaid((booking as any).final_balance_paid || false);
       setManualPriceOverride((booking as any).manual_price_override?.toString() || '');
       setWaiveCleaningFee((booking as any).waive_cleaning_fee || false);
-      
+
       // Load checklist items
       const customItems = (booking as any).custom_checklist_items as ChecklistItem[] | null;
       if (customItems && customItems.length > 0) {
@@ -84,7 +85,7 @@ const BookingDetailsModal = ({
     if (manualPriceOverride && !isNaN(parseFloat(manualPriceOverride))) {
       return parseFloat(manualPriceOverride);
     }
-    
+
     let price = Number(booking.price);
     let cleaning = waiveCleaningFee ? 0 : Number(booking.cleaning_fee);
     return price + cleaning;
@@ -433,7 +434,7 @@ const BookingDetailsModal = ({
                 <span className="text-muted-foreground">Diária</span>
                 <span>R$ {Number(booking.price).toFixed(0)},00</span>
               </div>
-              
+
               <div className="flex justify-between items-center text-sm">
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground">Taxa de limpeza</span>

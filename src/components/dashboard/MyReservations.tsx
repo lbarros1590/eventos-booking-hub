@@ -1,12 +1,14 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useData } from '@/contexts/DataContext';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarDays, Clock, DollarSign } from 'lucide-react';
 
 const MyReservations = () => {
-  const { user, profile, bookings } = useApp();
+  const { user, profile } = useAuth();
+  const { bookings } = useData();
 
   const userBookings = bookings
     .filter((b) => b.user_id === user?.id || b.profile_id === profile?.id)

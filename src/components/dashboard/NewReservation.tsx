@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Calendar } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useData } from '@/contexts/DataContext';
 import { useVenueSettings } from '@/hooks/useVenueSettings';
 import { getIcon } from '@/lib/icons';
 import { toast } from 'sonner';
@@ -19,10 +20,10 @@ const LOYALTY_THRESHOLD = 4;
 const sendWhatsappNotification = async (clientName: string, bookingDate: string, total: number) => {
   try {
     console.log('📤 Enviando notificação WhatsApp...', { clientName, bookingDate, total });
-    const backendUrl = process.env.NODE_ENV === 'production' 
+    const backendUrl = process.env.NODE_ENV === 'production'
       ? 'https://seu-dominio.com'
       : 'http://localhost:3001';
-    
+
     const response = await fetch(`${backendUrl}/api/send-whatsapp-notification`, {
       method: 'POST',
       headers: {
@@ -47,7 +48,8 @@ const sendWhatsappNotification = async (clientName: string, bookingDate: string,
 };
 
 const NewReservation = () => {
-  const { profile, isDateBooked, createBooking } = useApp();
+  const { profile } = useAuth();
+  const { isDateBooked, createBooking } = useData();
   const { settings, calendarExceptions, calculatePriceForDate, isDateBlocked, loading } = useVenueSettings();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -98,10 +100,10 @@ const NewReservation = () => {
       toast.error('Erro ao criar reserva. Tente novamente.');
     } else {
       // Enviar mensagem WhatsApp para a proprietária em segundo plano
-      const clientName = profile.full_name || 'Cliente';
+      const clientName = profile.name || 'Cliente';
       const bookingDate = format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
       const whatsappMessage = `Olá! Nova reserva solicitada:\n\n*Nome do Cliente:* ${clientName}\n*Data da Reserva:* ${bookingDate}\n*Valor Total:* R$ ${priceInfo.total},00\n\nPor favor, entre em contato para confirmar.`;
-      
+
       // Chamar API em segundo plano (não aguarda a resposta)
       sendWhatsappNotification(clientName, bookingDate, priceInfo.total).catch(err => {
         console.error('Erro ao enviar notificação WhatsApp:', err);
@@ -169,7 +171,7 @@ const NewReservation = () => {
                   className="w-full h-full object-cover"
                 />
               )}
-              
+
               {galleryUrls.length > 1 && (
                 <>
                   <button

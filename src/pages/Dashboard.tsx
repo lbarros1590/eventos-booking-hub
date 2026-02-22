@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import NewReservation from '@/components/dashboard/NewReservation';
 
 const Dashboard = () => {
-  const { user, loading } = useApp();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {

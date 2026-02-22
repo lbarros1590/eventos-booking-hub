@@ -3,11 +3,11 @@ import { Button } from '@/components/ui/button';
 import { BUSINESS_INFO } from '@/lib/constants';
 import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, role, signOut } = useApp();
+  const { user, role, signOut } = useAuth();
 
   const handleSignOut = async () => {
     await signOut();
@@ -20,15 +20,15 @@ const Header = () => {
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <img 
+            <img
               src="/favicon.ico"
-              alt="EJ Eventos" 
-              className="h-8 w-auto sm:h-10" 
+              alt="EJ Eventos"
+              className="h-8 w-auto sm:h-10"
             />
-  <span className="text-xl font-bold text-primary sm:text-2xl">
-    EJ Eventos
-  </span>
-</Link>
+            <span className="text-xl font-bold text-primary sm:text-2xl">
+              EJ Eventos
+            </span>
+          </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">

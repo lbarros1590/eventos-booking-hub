@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useData } from '@/contexts/DataContext';
 import { toast } from 'sonner';
 import { Users, Phone, Gift, Award, Cake, Plus, MessageCircle, Calendar, Mail, User } from 'lucide-react';
 import { LOYALTY_THRESHOLD, BUSINESS_INFO } from '@/lib/constants';
@@ -14,7 +15,7 @@ import { format, parseISO, differenceInYears } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const AdminClients = () => {
-  const { profiles, bookings, grantDiscount, createManualClient } = useApp();
+  const { profiles, bookings, grantDiscount, createManualClient } = useData();
   const [addClientModalOpen, setAddClientModalOpen] = useState(false);
   const [newClientName, setNewClientName] = useState('');
   const [newClientPhone, setNewClientPhone] = useState('');
@@ -119,7 +120,7 @@ const AdminClients = () => {
             Visualize e gerencie seus clientes
           </p>
         </div>
-        <Button 
+        <Button
           onClick={() => setAddClientModalOpen(true)}
           className="bg-gradient-primary hover:opacity-90"
         >
@@ -250,7 +251,7 @@ const AdminClients = () => {
                   const age = calculateAge(client.birth_date);
                   const totalBookings = getBookingCount(client.id);
                   const isManualClient = client.user_id === null;
-                  
+
                   return (
                     <TableRow key={client.id} className={isClientBirthday ? 'bg-warning/5' : ''}>
                       <TableCell>
@@ -286,7 +287,7 @@ const AdminClients = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {client.birth_date 
+                        {client.birth_date
                           ? format(parseISO(client.birth_date), 'dd/MM/yyyy', { locale: ptBR })
                           : '-'
                         }

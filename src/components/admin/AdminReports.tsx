@@ -3,16 +3,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useData } from '@/contexts/DataContext';
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { TrendingUp, TrendingDown, DollarSign, Receipt, PiggyBank, FileText } from 'lucide-react';
 
 const AdminReports = () => {
-  const { bookings, expenses, profiles } = useApp();
+  const { profiles, bookings, expenses } = useData();
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth();
-  
+
   const [selectedMonth, setSelectedMonth] = useState(currentMonth.toString());
   const [selectedYear, setSelectedYear] = useState(currentYear.toString());
 
@@ -32,7 +33,7 @@ const AdminReports = () => {
     const filteredBookings = bookings.filter(booking => {
       const bookingDate = parseISO(booking.booking_date);
       return isWithinInterval(bookingDate, { start: startDate, end: endDate }) &&
-             booking.status !== 'cancelled';
+        booking.status !== 'cancelled';
     });
 
     const filteredExpenses = expenses.filter(expense => {
@@ -191,18 +192,15 @@ const AdminReports = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                filteredData.netProfit >= 0 ? 'bg-success/10' : 'bg-destructive/10'
-              }`}>
-                <PiggyBank className={`w-6 h-6 ${
-                  filteredData.netProfit >= 0 ? 'text-success' : 'text-destructive'
-                }`} />
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${filteredData.netProfit >= 0 ? 'bg-success/10' : 'bg-destructive/10'
+                }`}>
+                <PiggyBank className={`w-6 h-6 ${filteredData.netProfit >= 0 ? 'text-success' : 'text-destructive'
+                  }`} />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Lucro Líquido</p>
-                <p className={`text-2xl font-bold ${
-                  filteredData.netProfit >= 0 ? 'text-success' : 'text-destructive'
-                }`}>
+                <p className={`text-2xl font-bold ${filteredData.netProfit >= 0 ? 'text-success' : 'text-destructive'
+                  }`}>
                   R$ {filteredData.netProfit.toLocaleString('pt-BR')}
                 </p>
               </div>

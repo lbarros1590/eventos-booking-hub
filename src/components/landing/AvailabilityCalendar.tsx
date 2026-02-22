@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useVenueSettings } from '@/hooks/useVenueSettings';
-import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { format, isBefore, startOfDay, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarDays, CheckCircle, XCircle, Clock, ArrowRight } from 'lucide-react';
@@ -19,7 +19,7 @@ interface BookedDate {
 
 const AvailabilityCalendar = () => {
   const navigate = useNavigate();
-  const { user, profile } = useApp();
+  const { user, profile } = useAuth();
   const { settings, calendarExceptions, calculatePriceForDate, isDateBlocked, loading: settingsLoading } = useVenueSettings();
   const [bookedDates, setBookedDates] = useState<BookedDate[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
@@ -53,7 +53,7 @@ const AvailabilityCalendar = () => {
 
   const handleDateSelect = (date: Date | undefined) => {
     if (!date) return;
-    
+
     if (isPastDate(date) || isDateBooked(date) || isDateBlocked(date)) {
       return;
     }
@@ -67,8 +67,8 @@ const AvailabilityCalendar = () => {
     }
   };
 
-  const priceInfo = selectedDate && settings 
-    ? calculatePriceForDate(selectedDate, profile?.has_discount) 
+  const priceInfo = selectedDate && settings
+    ? calculatePriceForDate(selectedDate, profile?.has_discount)
     : null;
 
   const getDayClassName = (date: Date): string => {
@@ -132,19 +132,19 @@ const AvailabilityCalendar = () => {
                       available: (date) => !isPastDate(date) && !isDateBooked(date) && !isDateBlocked(date),
                     }}
                     modifiersStyles={{
-                      booked: { 
-                        backgroundColor: 'hsl(var(--destructive))', 
+                      booked: {
+                        backgroundColor: 'hsl(var(--destructive))',
                         color: 'hsl(var(--destructive-foreground))',
                         cursor: 'not-allowed',
                       },
-                      blocked: { 
-                        backgroundColor: 'hsl(var(--muted))', 
+                      blocked: {
+                        backgroundColor: 'hsl(var(--muted))',
                         color: 'hsl(var(--muted-foreground))',
                         textDecoration: 'line-through',
                         cursor: 'not-allowed',
                       },
-                      available: { 
-                        backgroundColor: 'hsl(142 76% 36% / 0.1)', 
+                      available: {
+                        backgroundColor: 'hsl(142 76% 36% / 0.1)',
                         color: 'hsl(142 76% 36%)',
                       },
                     }}
@@ -220,7 +220,7 @@ const AvailabilityCalendar = () => {
               Você precisa estar logado para fazer uma reserva.
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedDate && priceInfo && (
             <div className="p-4 bg-secondary rounded-xl space-y-2 my-4">
               <p className="font-medium text-foreground">

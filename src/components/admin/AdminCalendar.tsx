@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { useApp, Booking } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useData, Booking } from '@/contexts/DataContext';
 import { useVenueSettings, CalendarException } from '@/hooks/useVenueSettings';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -17,14 +18,14 @@ import BookingDetailsModal from './BookingDetailsModal';
 import ManualReservationModal from './ManualReservationModal';
 
 const AdminCalendar = () => {
-  const { bookings, profiles, updateBookingStatus, refreshData } = useApp();
+  const { profiles, bookings, updateBookingStatus, refreshData } = useData();
   const { calendarExceptions, addCalendarException, updateCalendarException, deleteCalendarException, refreshExceptions } = useVenueSettings();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [exceptionModalOpen, setExceptionModalOpen] = useState(false);
   const [manualReservationModalOpen, setManualReservationModalOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  
+
   // Exception form state
   const [exceptionDate, setExceptionDate] = useState<Date | undefined>();
   const [exceptionPrice, setExceptionPrice] = useState('');
@@ -43,7 +44,7 @@ const AdminCalendar = () => {
   const handleDateClick = (date: Date | undefined) => {
     if (!date) return;
     setSelectedDate(date);
-    
+
     const booking = bookings.find(
       (b) => b.booking_date === date.toISOString().split('T')[0] && b.status !== 'cancelled'
     );

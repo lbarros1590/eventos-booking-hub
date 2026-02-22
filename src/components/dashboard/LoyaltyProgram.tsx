@@ -1,11 +1,11 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { LOYALTY_THRESHOLD, LOYALTY_DISCOUNT } from '@/lib/constants';
 import { Gift, Star, Trophy, Sparkles } from 'lucide-react';
 
 const LoyaltyProgram = () => {
-  const { profile } = useApp();
+  const { profile } = useAuth();
 
   const reservationCount = profile?.reservation_count || 0;
   const progress = Math.min((reservationCount / LOYALTY_THRESHOLD) * 100, 100);
