@@ -13,6 +13,8 @@ const Register = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [cpf, setCpf] = useState('');
+  const [address, setAddress] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -52,7 +54,7 @@ const Register = () => {
 
     setLoading(true);
 
-    const { error } = await signUp(email, password, name, phone, birthDate);
+    const { error } = await signUp(email, password, name, phone, birthDate, cpf, address);
 
     if (error) {
       if (error.message.includes('already registered')) {
@@ -70,6 +72,7 @@ const Register = () => {
 
   const age = birthDate ? calculateAge(birthDate) : null;
   const isMinor = age !== null && age < 18;
+
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 py-12">
@@ -125,6 +128,26 @@ const Register = () => {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cpf">CPF</Label>
+                <Input
+                  id="cpf"
+                  type="text"
+                  placeholder="000.000.000-00"
+                  value={cpf}
+                  onChange={(e) => setCpf(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="address">Endereço (opcional)</Label>
+                <Input
+                  id="address"
+                  type="text"
+                  placeholder="Rua, número, bairro, cidade"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
                 />
               </div>
               <div className="space-y-2">

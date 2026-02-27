@@ -98,14 +98,14 @@ const BookingDetailsModal = ({
   const handleSaveBookingDetails = async () => {
     setSaving(true);
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('bookings')
         .update({
           deposit_paid: depositPaid,
           final_balance_paid: finalBalancePaid,
           manual_price_override: manualPriceOverride ? parseFloat(manualPriceOverride) : null,
           waive_cleaning_fee: waiveCleaningFee,
-          custom_checklist_items: checklistItems as unknown as any,
+          custom_checklist_items: checklistItems,
           total_price: finalPrice,
         })
         .eq('id', booking.id);
@@ -143,6 +143,17 @@ const BookingDetailsModal = ({
   };
 
   const handlePrint = async () => {
+    // Fetch full profile data including cpf, rg, address
+    const { data: fullProfile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', profile?.id || '')
+      .single();
+
+    const clientCpf = (fullProfile as any)?.cpf || null;
+    const clientRg = (fullProfile as any)?.rg || null;
+    const clientAddress = (fullProfile as any)?.address || null;
+
     // Fetch current inventory items for the checklist
     const { data: currentInventory } = await supabase
       .from('inventory_items')
@@ -168,11 +179,12 @@ const BookingDetailsModal = ({
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
+
     const content = `
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Contrato EJ Eventos</title>
+        <title>Contrato de Locação de Espaço - EJ Eventos</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { 
@@ -180,6 +192,7 @@ const BookingDetailsModal = ({
             padding: 40px; 
             line-height: 1.6;
             color: #333;
+            font-size: 14px;
           }
           .header { 
             text-align: center; 
@@ -219,6 +232,7 @@ const BookingDetailsModal = ({
             height: 18px; 
             border: 2px solid #0ea5e9; 
             border-radius: 3px;
+            flex-shrink: 0;
           }
           .signatures { 
             display: grid; 
@@ -239,9 +253,14 @@ const BookingDetailsModal = ({
             border-radius: 12px; 
             font-size: 12px;
             font-weight: bold;
+            margin-left: 10px;
           }
           .paid { background: #dcfce7; color: #16a34a; }
           .pending { background: #fef3c7; color: #d97706; }
+          .text-justify { text-align: justify; }
+          .mb-10 { margin-bottom: 10px; }
+          .mt-20 { margin-top: 20px; }
+          .page-break { page-break-before: always; }
           @media print {
             body { padding: 20px; }
             .no-print { display: none; }
@@ -251,77 +270,131 @@ const BookingDetailsModal = ({
       <body>
         <div class="header">
           <h1>EJ Eventos</h1>
-          <p>Contrato de Locação de Espaço</p>
+          <p>Contrato de Locação de Espaço para Eventos</p>
         </div>
 
         <div class="section">
-          <div class="section-title">Dados do Cliente</div>
-          <div class="info-grid">
-            <div class="info-item">
-              <label>Nome</label>
-              <span>${profile?.name || 'Não informado'}</span>
-            </div>
-            <div class="info-item">
-              <label>Telefone</label>
-              <span>${profile?.phone || 'Não informado'}</span>
-            </div>
-          </div>
+          <div class="section-title">1. PARTES CONTRATANTES</div>
+          <p class="mb-10">
+            Pelo presente instrumento particular de Contrato de Locação de Espaço para Eventos, de um lado, como <strong>LOCADOR(A)</strong>:
+            <strong>LEINER PAULA CHICATI</strong>, brasileira, casada, portadora do CPF nº 027.926.611-19,
+            residente e domiciliada na Rua Fernando Bassan, casa 274, Condomínio Hawaii, Pascoal Ramos, Cuiabá – MT,
+            proprietária do espaço <strong>EJ EVENTOS</strong>, situado na R. dos Cravos, 174 – Serra Dourada, Cuiabá – MT, CEP 78056-239,
+            doravante denominada simplesmente <strong>LOCADORA</strong>.
+          </p>
+          <p>
+            E de outro lado, como <strong>LOCATÁRIO(A)</strong>:
+            <strong>${profile?.name?.toUpperCase() || 'NOME DO CLIENTE'}</strong>,
+            ${profile?.phone ? `telefone ${profile.phone},` : ''}
+            CPF nº ${clientCpf || '___________________'},
+            ${clientRg ? `RG nº ${clientRg},` : ''}
+            residente e domiciliado(a) em ${clientAddress || '_______________________________________________'},
+            doravante denominado(a) simplesmente <strong>LOCATÁRIA</strong>.
+          </p>
+          <p class="mt-10">
+            As partes acima qualificadas, por este instrumento particular, ajustam e contratam a locação do espaço para eventos, mediante as cláusulas e condições seguintes:
+          </p>
         </div>
 
         <div class="section">
-          <div class="section-title">Dados da Reserva</div>
-          <div class="info-grid">
-            <div class="info-item">
-              <label>Data do Evento</label>
-              <span>${format(parseISO(booking.booking_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</span>
-            </div>
-            <div class="info-item">
-              <label>Duração</label>
-              <span>12 horas</span>
-            </div>
-          </div>
+          <div class="section-title">2. OBJETO DO CONTRATO</div>
+          <p class="text-justify">
+            O objeto deste contrato é a locação temporária do espaço <strong>EJ EVENTOS</strong>,
+            situado na R. dos Cravos, 174 – Serra Dourada, Cuiabá – MT, CEP 78056-239,
+            exclusivamente para fins de evento social, no dia
+            <strong>${format(parseISO(booking.booking_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</strong>,
+            com duração de <strong>12 (doze) horas</strong>, com início às 20:00h e término às 8:00h do dia seguinte.
+            O espaço será entregue à LOCATÁRIA em perfeitas condições de uso e limpeza, conforme checklist de entrega.
+          </p>
         </div>
 
         <div class="section">
-          <div class="section-title">Resumo Financeiro</div>
+          <div class="section-title">3. VALOR DA LOCAÇÃO E CONDIÇÕES DE PAGAMENTO</div>
           <table class="financial-table">
             <tr>
-              <td class="label">Diária</td>
-              <td class="value">R$ ${Number(booking.price).toFixed(2)}</td>
+              <td class="label">Valor da Diária</td>
+              <td class="value">R$ ${Number(booking.price).toFixed(2).replace('.', ',')}</td>
             </tr>
             <tr>
               <td class="label">Taxa de Limpeza</td>
-              <td class="value">${waiveCleaningFee ? 'Isento' : `R$ ${Number(booking.cleaning_fee).toFixed(2)}`}</td>
+              <td class="value">${waiveCleaningFee ? 'Isento' : `R$ ${Number(booking.cleaning_fee).toFixed(2).replace('.', ',')}`}</td>
             </tr>
-            ${manualPriceOverride ? `
+            ${manualPriceOverride && !isNaN(parseFloat(manualPriceOverride)) ? `
             <tr>
-              <td class="label">Ajuste de Preço</td>
-              <td class="value">R$ ${parseFloat(manualPriceOverride).toFixed(2)}</td>
+              <td class="label">Ajuste de Preço (Manual)</td>
+              <td class="value">R$ ${parseFloat(manualPriceOverride).toFixed(2).replace('.', ',')}</td>
+            </tr>
+            ` : ''}
+            ${booking.discount_applied && Number(booking.discount_applied) > 0 ? `
+            <tr>
+              <td class="label">Desconto Fidelidade</td>
+              <td class="value">- R$ ${Number(booking.discount_applied).toFixed(2).replace('.', ',')}</td>
             </tr>
             ` : ''}
             <tr class="total">
-              <td>Total</td>
-              <td class="value">R$ ${finalPrice.toFixed(2)}</td>
+              <td>Total Geral</td>
+              <td class="value">R$ ${finalPrice.toFixed(2).replace('.', ',')}</td>
             </tr>
             <tr>
-              <td class="label">Sinal (50%)</td>
+              <td class="label">Sinal (50% do Total)</td>
               <td class="value">
-                R$ ${depositAmount.toFixed(2)}
+                R$ ${depositAmount.toFixed(2).replace('.', ',')}
                 <span class="payment-status ${depositPaid ? 'paid' : 'pending'}">${depositPaid ? 'PAGO' : 'PENDENTE'}</span>
               </td>
             </tr>
             <tr>
-              <td class="label">Restante</td>
+              <td class="label">Saldo Final (50% do Total)</td>
               <td class="value">
-                R$ ${remainingBalance.toFixed(2)}
+                R$ ${remainingBalance.toFixed(2).replace('.', ',')}
                 <span class="payment-status ${finalBalancePaid ? 'paid' : 'pending'}">${finalBalancePaid ? 'PAGO' : 'PENDENTE'}</span>
               </td>
             </tr>
           </table>
+          <p class="mt-10 text-justify">
+            O pagamento do valor total da locação será realizado da seguinte forma:
+            ${settings?.payment_terms_text || '50% (cinquenta por cento) no ato da assinatura deste contrato, a título de sinal e garantia, e os 50% (cinquenta por cento) restantes deverão ser pagos na entrega das chaves do espaço, antes do início do evento.'}
+            O não cumprimento das datas de pagamento implicará em multa de 2% sobre o valor devido, acrescido de juros de 1% ao mês.
+          </p>
         </div>
 
         <div class="section">
-          <div class="section-title">Checklist de Entrega - Inventário do Espaço</div>
+          <div class="section-title">4. OBRIGAÇÕES DO LOCATÁRIO(A)</div>
+          <ul style="list-style: decimal; margin-left: 20px;">
+            <li class="mb-10 text-justify">Utilizar o espaço exclusivamente para o fim contratado, qual seja, a realização do evento, sendo vedada a sublocação ou cessão a terceiros.</li>
+            <li class="mb-10 text-justify">Manter a ordem e a boa conduta durante o evento, responsabilizando-se por quaisquer danos causados ao imóvel, equipamentos e mobiliário, seja por si ou por seus convidados.</li>
+            <li class="mb-10 text-justify">Entregar o espaço nas mesmas condições de limpeza e organização em que o recebeu, ressalvado o desgaste natural pelo uso. Caso contrário, será cobrada uma taxa adicional de limpeza.</li>
+            <li class="mb-10 text-justify">Respeitar os horários de início e término do evento, conforme estabelecido na Cláusula 2. O atraso na desocupação implicará em multa a ser definida pelo LOCADOR(A).</li>
+            <li class="mb-10 text-justify">Não realizar alterações estruturais no imóvel, nem instalar equipamentos que possam comprometer a segurança ou a integridade do local sem prévia autorização do LOCADOR(A).</li>
+            <li class="mb-10 text-justify">Ser responsável por todos os alvarás, licenças e autorizações necessárias para a realização do evento, bem como pela segurança de seus convidados.</li>
+          </ul>
+        </div>
+
+        <div class="section">
+          <div class="section-title">5. OBRIGAÇÕES DO LOCADOR(A)</div>
+          <ul style="list-style: decimal; margin-left: 20px;">
+            <li class="mb-10 text-justify">Disponibilizar o espaço em perfeitas condições de uso, limpeza e segurança na data e horário acordados.</li>
+            <li class="mb-10 text-justify">Garantir o funcionamento adequado das instalações elétricas, hidráulicas e sanitárias do imóvel.</li>
+            <li class="mb-10 text-justify">Fornecer o checklist de entrega e recebimento do inventário do espaço, conforme anexo.</li>
+          </ul>
+        </div>
+
+        <div class="section">
+          <div class="section-title">6. RESCISÃO CONTRATUAL</div>
+          <p class="text-justify">
+            O presente contrato poderá ser rescindido por qualquer das partes em caso de descumprimento de suas cláusulas.
+            Em caso de rescisão por parte do LOCATÁRIO(A) com menos de 30 (trinta) dias de antecedência da data do evento, o valor do sinal não será restituído.
+            Em caso de rescisão por parte do LOCADOR(A), este deverá restituir integralmente o valor pago pelo LOCATÁRIO(A), acrescido de multa de 10% sobre o valor total do contrato.
+          </p>
+        </div>
+
+        <div class="page-break"></div>
+
+        <div class="section">
+          <div class="section-title">7. CHECKLIST DE ENTREGA E RECEBIMENTO DO INVENTÁRIO DO ESPAÇO</div>
+          <p class="mb-10">
+            Este checklist detalha os itens presentes no espaço no momento da entrega ao LOCATÁRIO(A) e deverá ser conferido e assinado por ambas as partes.
+            Qualquer divergência ou dano deverá ser registrado no ato da entrega.
+          </p>
           ${Object.entries(groupedInventory).map(([category, items]) => `
             <div style="margin-bottom: 15px;">
               <p style="font-weight: bold; color: #0ea5e9; font-size: 13px; margin-bottom: 8px;">${category}</p>
@@ -338,7 +411,7 @@ const BookingDetailsModal = ({
           
           ${checklistItems.length > 0 ? `
             <div style="margin-top: 20px;">
-              <p style="font-weight: bold; color: #666; font-size: 13px; margin-bottom: 8px;">Itens Adicionais</p>
+              <p style="font-weight: bold; color: #666; font-size: 13px; margin-bottom: 8px;">Itens Adicionais (Personalizados para esta reserva)</p>
               <ul class="checklist">
                 ${checklistItems.map(item => `
                   <li>
@@ -349,31 +422,60 @@ const BookingDetailsModal = ({
               </ul>
             </div>
           ` : ''}
+          <p class="mt-20 text-justify">
+            O LOCATÁRIO(A) declara ter recebido o espaço e os itens acima listados em perfeitas condições de uso e funcionamento.
+            Compromete-se a devolvê-los nas mesmas condições, sob pena de arcar com os custos de reparo ou substituição.
+          </p>
         </div>
 
         <div class="section">
-          <div class="section-title">Termos</div>
-          <p style="font-size: 13px; color: #666;">
-            ${settings?.payment_terms_text || '50% no ato da reserva, 50% na entrega das chaves.'}
-          </p>
-          <p style="font-size: 13px; color: #666; margin-top: 10px;">
-            O locatário compromete-se a devolver o espaço nas mesmas condições em que o recebeu.
+          <div class="section-title">8. DISPOSIÇÕES FINAIS E FORO</div>
+          <p class="text-justify">
+            É proibida a sublocação do espaço ou o uso para atividades ilícitas, sob pena de rescisão imediata do contrato e responsabilização civil e criminal.
+            Fica eleito o foro da comarca de Cuiabá – MT para dirimir quaisquer dúvidas ou litígios decorrentes do presente contrato,
+            renunciando a qualquer outro, por mais privilegiado que seja.
           </p>
         </div>
+
+        <p class="mt-20 text-justify">
+          E, por estarem assim justos e contratados, as partes assinam o presente instrumento em 2 (duas) vias de igual teor e forma, na presença das duas testemunhas abaixo, para que produza seus devidos e legais efeitos.
+        </p>
+
+        <p style="margin-top: 30px; text-align: right;">
+          Cuiabá – MT, ${format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}.
+        </p>
 
         <div class="signatures">
           <div class="signature-line">
-            <strong>Locador</strong>
-            <span>EJ Eventos</span>
+            <strong>LEINER PAULA CHICATI</strong>
+            <span>CPF: 027.926.611-19</span>
+            <span>(Locadora)</span>
           </div>
           <div class="signature-line">
-            <strong>Locatário</strong>
-            <span>${profile?.name || ''}</span>
+            <strong>${profile?.name?.toUpperCase() || '______________________________'}</strong>
+            <span>CPF: ${clientCpf || '______________________________'}</span>
+            <span>(Locatária)</span>
           </div>
         </div>
 
-        <p style="text-align: center; margin-top: 40px; font-size: 12px; color: #999;">
-          Data de impressão: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}
+        <div class="signatures" style="margin-top: 60px;">
+          <div class="signature-line">
+            <strong>TESTEMUNHA 1</strong>
+            <span>Nome: _______________________________</span>
+            <span>CPF: ________________________________</span>
+          </div>
+          <div class="signature-line">
+            <strong>TESTEMUNHA 2</strong>
+            <span>Nome: _______________________________</span>
+            <span>CPF: ________________________________</span>
+          </div>
+        </div>
+
+        <p style="text-align: center; margin-top: 20px; font-size: 10px; color: #bbb;">
+          Reserva nº ${booking.id.substring(0, 8).toUpperCase()} – Documento gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}.
+        </p>
+        <p style="text-align: center; margin-top: 10px; font-size: 10px; color: #bbb;">
+          Documento gerado eletronicamente em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}.
         </p>
 
         <script>window.print();</script>
@@ -383,7 +485,23 @@ const BookingDetailsModal = ({
 
     printWindow.document.write(content);
     printWindow.document.close();
+
+    // Save contract to database
+    try {
+      await (supabase as any)
+        .from('contracts')
+        .insert({
+          booking_id: booking.id,
+          profile_id: profile?.id || null,
+          html_content: content,
+        });
+      toast.success('Contrato salvo no sistema!');
+    } catch (err) {
+      console.error('Error saving contract:', err);
+      // Non-blocking: print still works even if save fails
+    }
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

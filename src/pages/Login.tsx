@@ -101,11 +101,18 @@ const Login = () => {
               </Button>
             </form>
 
-            <div className="mt-6 text-center text-sm">
-              <span className="text-muted-foreground">Não tem uma conta? </span>
-              <Link to="/register" className="text-primary hover:underline font-medium">
-                Criar conta
-              </Link>
+            <div className="mt-6 space-y-3 text-center text-sm">
+              <div>
+                <Link to="/forgot-password" className="text-muted-foreground hover:text-primary transition-colors">
+                  Esqueci minha senha
+                </Link>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Não tem uma conta? </span>
+                <Link to="/register" className="text-primary hover:underline font-medium">
+                  Criar conta
+                </Link>
+              </div>
             </div>
           </CardContent>
         </Card>

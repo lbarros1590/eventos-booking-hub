@@ -11,6 +11,9 @@ export interface Profile {
   email: string | null;
   phone: string | null;
   birth_date: string | null;
+  cpf: string | null;
+  rg: string | null;
+  address: string | null;
   reservation_count: number;
   has_discount: boolean;
   loyalty_points: number;
@@ -23,7 +26,7 @@ interface AuthContextType {
   role: UserRole;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, name: string, phone: string, birthDate?: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, name: string, phone: string, birthDate?: string, cpf?: string, address?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshUserData: () => Promise<void>;
 }
@@ -125,13 +128,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const signUp = async (email: string, password: string, name: string, phone: string, birthDate?: string) => {
+  const signUp = async (email: string, password: string, name: string, phone: string, birthDate?: string, cpf?: string, address?: string) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/`,
-        data: { name, phone, birth_date: birthDate || null },
+        data: { name, phone, birth_date: birthDate || null, cpf: cpf || null, address: address || null },
       },
     });
     return { error };

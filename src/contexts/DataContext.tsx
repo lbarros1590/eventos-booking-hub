@@ -38,6 +38,9 @@ interface ManualClientData {
     phone: string;
     birth_date: string | null;
     email?: string | null;
+    cpf?: string | null;
+    rg?: string | null;
+    address?: string | null;
 }
 
 interface ManualBookingData {
@@ -65,10 +68,10 @@ interface DataContextType {
     deleteExpense: (expenseId: string) => Promise<void>;
     grantDiscount: (profileId: string) => Promise<void>;
     isDateBooked: (date: Date) => boolean;
-    calculatePrice: (date: Date) => { basePrice: number; cleaningFee: number; total: number };
     createManualClient: (data: ManualClientData) => Promise<{ error: Error | null; profile: Profile | null }>;
     createManualBooking: (data: ManualBookingData) => Promise<{ error: Error | null }>;
     getProfileById: (profileId: string) => Profile | undefined;
+    refreshProfiles: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -103,6 +106,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
         } catch (error) {
             console.error('Error refreshing data:', error);
+        }
+    };
+
+    const refreshProfiles = async () => {
+        try {
+            const { data: profilesData } = await supabase
+                .from('profiles')
+                .select('*')
+                .order('name', { ascending: true });
+            if (profilesData) setProfiles(profilesData as Profile[]);
+        } catch (error) {
+            console.error('Error refreshing profiles:', error);
         }
     };
 
@@ -163,15 +178,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return bookings.some((b) => b.booking_date === dateStr && b.status !== 'cancelled');
     };
 
-    const calculatePrice = (date: Date) => {
-        const dayOfWeek = date.getDay();
-        const isWeekend = dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6;
-        let basePrice = isWeekend ? 600 : 400;
-        const cleaningFee = 70;
-        if (profile?.has_discount) basePrice = basePrice * 0.8;
-        const total = basePrice + cleaningFee;
-        return { basePrice, cleaningFee, total };
-    };
+
 
     const createManualClient = async (data: ManualClientData) => {
         const { data: profileData, error } = await supabase.from('profiles').insert({
@@ -197,7 +204,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         <DataContext.Provider value={{
             profiles, bookings, expenses, refreshData, createBooking, updateBookingStatus,
             updateBooking, addExpense, updateExpense, deleteExpense, grantDiscount,
-            isDateBooked, calculatePrice, createManualClient, createManualBooking,
+            isDateBooked, createManualClient, createManualBooking, refreshProfiles,
             getProfileById: (id) => profiles.find(p => p.id === id),
         }}>
             {children}

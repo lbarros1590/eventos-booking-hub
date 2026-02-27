@@ -5,28 +5,119 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useAuth } from '@/contexts/AuthContext';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useData } from '@/contexts/DataContext';
+import { Profile } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Users, Phone, Gift, Award, Cake, Plus, MessageCircle, Calendar, Mail, User } from 'lucide-react';
-import { LOYALTY_THRESHOLD, BUSINESS_INFO } from '@/lib/constants';
+import { Users, Phone, Gift, Award, Cake, Plus, MessageCircle, Calendar, Mail, User, Edit2, Trash2, KeyRound, AlertTriangle } from 'lucide-react';
+import { LOYALTY_THRESHOLD } from '@/lib/constants';
 import { format, parseISO, differenceInYears } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const AdminClients = () => {
-  const { profiles, bookings, grantDiscount, createManualClient } = useData();
+  const { profiles, bookings, grantDiscount, createManualClient, refreshProfiles } = useData();
   const [addClientModalOpen, setAddClientModalOpen] = useState(false);
+  const [editClient, setEditClient] = useState<Profile | null>(null);
+  const [deleteClient, setDeleteClient] = useState<Profile | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  // Add form
   const [newClientName, setNewClientName] = useState('');
   const [newClientPhone, setNewClientPhone] = useState('');
   const [newClientBirthDate, setNewClientBirthDate] = useState('');
   const [newClientEmail, setNewClientEmail] = useState('');
+  const [newClientCpf, setNewClientCpf] = useState('');
+  const [newClientRg, setNewClientRg] = useState('');
+  const [newClientAddress, setNewClientAddress] = useState('');
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  // Edit form
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editCpf, setEditCpf] = useState('');
+  const [editRg, setEditRg] = useState('');
+  const [editAddress, setEditAddress] = useState('');
+  const [editBirthDate, setEditBirthDate] = useState('');
 
   const handleGrantDiscount = async (profileId: string, profileName: string) => {
     await grantDiscount(profileId);
     toast.success(`Desconto concedido para ${profileName}`);
+  };
+
+  const openEditModal = async (client: Profile) => {
+    // Fetch fresh CPF/RG/address from Supabase
+    const { data } = await (supabase as any).from('profiles').select('*').eq('id', client.id).single();
+    const fresh = data || client;
+    setEditClient(client);
+    setEditName(fresh.name || '');
+    setEditPhone(fresh.phone || '');
+    setEditEmail(fresh.email || '');
+    setEditCpf(fresh.cpf || '');
+    setEditRg(fresh.rg || '');
+    setEditAddress(fresh.address || '');
+    setEditBirthDate(fresh.birth_date || '');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editClient) return;
+    setSaving(true);
+    const { error } = await (supabase as any)
+      .from('profiles')
+      .update({
+        name: editName,
+        phone: editPhone,
+        email: editEmail || null,
+        cpf: editCpf || null,
+        rg: editRg || null,
+        address: editAddress || null,
+        birth_date: editBirthDate || null,
+      })
+      .eq('id', editClient.id);
+
+    if (error) {
+      toast.error('Erro ao atualizar cliente: ' + error.message);
+    } else {
+      toast.success('Cliente atualizado com sucesso!');
+      setEditClient(null);
+      if (refreshProfiles) await refreshProfiles();
+    }
+    setSaving(false);
+  };
+
+  const handleDeleteClient = async () => {
+    if (!deleteClient) return;
+    setDeletingId(deleteClient.id);
+    const { error } = await (supabase as any)
+      .from('profiles')
+      .delete()
+      .eq('id', deleteClient.id);
+
+    if (error) {
+      toast.error('Erro ao excluir cliente: ' + error.message);
+    } else {
+      toast.success('Cliente excluído com sucesso!');
+      setDeleteClient(null);
+      if (refreshProfiles) await refreshProfiles();
+    }
+    setDeletingId(null);
+  };
+
+  const handleSendPasswordReset = async (email: string | null, name: string) => {
+    if (!email) {
+      toast.error(`${name} não possui email cadastrado para recuperação de senha.`);
+      return;
+    }
+    const siteUrl = import.meta.env.VITE_SITE_URL || window.location.origin;
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${siteUrl}/reset-password`,
+    });
+    if (error) {
+      toast.error('Erro ao enviar email de recuperação: ' + error.message);
+    } else {
+      toast.success(`Email de recuperação enviado para ${email}`);
+    }
   };
 
   const getBookingCount = (profileId: string) => {
@@ -72,6 +163,9 @@ const AdminClients = () => {
       phone: newClientPhone,
       birth_date: newClientBirthDate || null,
       email: newClientEmail || null,
+      cpf: newClientCpf || null,
+      rg: newClientRg || null,
+      address: newClientAddress || null,
     });
 
     if (result.error) {
@@ -83,6 +177,9 @@ const AdminClients = () => {
       setNewClientPhone('');
       setNewClientBirthDate('');
       setNewClientEmail('');
+      setNewClientCpf('');
+      setNewClientRg('');
+      setNewClientAddress('');
     }
     setLoading(false);
   };
@@ -351,6 +448,33 @@ const AdminClients = () => {
                               Dar Desconto
                             </Button>
                           )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSendPasswordReset(client.email, client.name)}
+                            className="text-muted-foreground hover:text-foreground"
+                            title="Enviar email de recuperação de senha"
+                          >
+                            <KeyRound className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEditModal(client)}
+                            className="text-primary hover:text-primary hover:bg-primary/10"
+                            title="Editar cliente"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setDeleteClient(client)}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            title="Excluir cliente"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -364,7 +488,7 @@ const AdminClients = () => {
 
       {/* Add Client Modal */}
       <Dialog open={addClientModalOpen} onOpenChange={setAddClientModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Adicionar Cliente Manual</DialogTitle>
             <DialogDescription>
@@ -391,6 +515,37 @@ const AdminClients = () => {
                 placeholder="(65) 99999-0000"
                 value={newClientPhone}
                 onChange={(e) => setNewClientPhone(e.target.value)}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="clientCpf">CPF</Label>
+                <Input
+                  id="clientCpf"
+                  placeholder="000.000.000-00"
+                  value={newClientCpf}
+                  onChange={(e) => setNewClientCpf(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="clientRg">RG</Label>
+                <Input
+                  id="clientRg"
+                  placeholder="0000000-0"
+                  value={newClientRg}
+                  onChange={(e) => setNewClientRg(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="clientAddress">Endereço</Label>
+              <Input
+                id="clientAddress"
+                placeholder="Rua, número, bairro, cidade"
+                value={newClientAddress}
+                onChange={(e) => setNewClientAddress(e.target.value)}
               />
             </div>
 
@@ -424,6 +579,82 @@ const AdminClients = () => {
               {loading ? 'Adicionando...' : 'Adicionar Cliente'}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+      {/* Edit Client Modal */}
+      <Dialog open={!!editClient} onOpenChange={(open) => !open && setEditClient(null)}>
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Cliente</DialogTitle>
+            <DialogDescription>
+              Atualize os dados de {editClient?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="editName">Nome Completo *</Label>
+              <Input id="editName" value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Nome completo" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editPhone">Telefone/WhatsApp *</Label>
+              <Input id="editPhone" type="tel" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="(65) 99999-0000" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="editCpf">CPF</Label>
+                <Input id="editCpf" value={editCpf} onChange={(e) => setEditCpf(e.target.value)} placeholder="000.000.000-00" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editRg">RG</Label>
+                <Input id="editRg" value={editRg} onChange={(e) => setEditRg(e.target.value)} placeholder="0000000-0" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editAddress">Endereço</Label>
+              <Input id="editAddress" value={editAddress} onChange={(e) => setEditAddress(e.target.value)} placeholder="Rua, número, bairro, cidade" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editEmail">Email (opcional)</Label>
+              <Input id="editEmail" type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} placeholder="email@exemplo.com" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editBirthDate">Data de Nascimento</Label>
+              <Input id="editBirthDate" type="date" value={editBirthDate} onChange={(e) => setEditBirthDate(e.target.value)} max={new Date().toISOString().split('T')[0]} />
+            </div>
+          </div>
+          <DialogFooter className="mt-4 flex gap-2">
+            <Button variant="outline" onClick={() => setEditClient(null)} className="flex-1">Cancelar</Button>
+            <Button onClick={handleSaveEdit} disabled={saving} className="flex-1 bg-gradient-primary hover:opacity-90">
+              {saving ? 'Salvando...' : 'Salvar Alterações'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={!!deleteClient} onOpenChange={(open) => !open && setDeleteClient(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              Excluir Cliente
+            </DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir <strong>{deleteClient?.name}</strong>?
+              Esta ação não pode ser desfeita e também excluirá o histórico de reservas vinculado.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4 flex gap-2">
+            <Button variant="outline" onClick={() => setDeleteClient(null)} className="flex-1">Cancelar</Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteClient}
+              disabled={deletingId === deleteClient?.id}
+              className="flex-1"
+            >
+              {deletingId ? 'Excluindo...' : 'Sim, Excluir'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

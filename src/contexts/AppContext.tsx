@@ -11,6 +11,9 @@ export interface Profile {
   email: string | null;
   phone: string | null;
   birth_date: string | null;
+  cpf: string | null;
+  rg: string | null;
+  address: string | null;
   reservation_count: number;
   has_discount: boolean;
   loyalty_points: number;
@@ -52,6 +55,9 @@ interface ManualClientData {
   phone: string;
   birth_date: string | null;
   email?: string | null;
+  cpf?: string | null;
+  rg?: string | null;
+  address?: string | null;
 }
 
 interface ManualBookingData {
@@ -76,7 +82,7 @@ interface AppContextType {
   expenses: Expense[];
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, name: string, phone: string, birthDate?: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, name: string, phone: string, birthDate?: string, cpf?: string, address?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   createBooking: (booking: Omit<Booking, 'id' | 'created_at' | 'user_id' | 'profile_id'>) => Promise<{ error: Error | null }>;
   updateBookingStatus: (bookingId: string, status: Booking['status']) => Promise<void>;
@@ -86,7 +92,6 @@ interface AppContextType {
   deleteExpense: (expenseId: string) => Promise<void>;
   grantDiscount: (profileId: string) => Promise<void>;
   isDateBooked: (date: Date) => boolean;
-  calculatePrice: (date: Date) => { basePrice: number; cleaningFee: number; total: number };
   refreshData: () => Promise<void>;
   createManualClient: (data: ManualClientData) => Promise<{ error: Error | null; profile: Profile | null }>;
   createManualBooking: (data: ManualBookingData) => Promise<{ error: Error | null }>;
@@ -117,20 +122,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setLoading(false);
     // Redireciona para home ou login para limpar a URL
     if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
-        window.location.href = '/';
+      window.location.href = '/';
     }
   };
 
   const fetchUserData = async (userId: string) => {
     try {
       console.log("Fetching user data for:", userId);
-      
+
       // 1. Tenta buscar perfil
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
-        .maybeSingle(); 
+        .maybeSingle();
 
       if (profileError) {
         throw profileError; // Joga pro catch para deslogar se der erro de banco
@@ -148,9 +153,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         .rpc('get_user_role', { _user_id: userId });
 
       if (roleError) {
-         console.error("Erro ao buscar cargo:", roleError);
-         // Não vamos deslogar por erro de cargo, apenas assume 'user'
-         setRole('user');
+        console.error("Erro ao buscar cargo:", roleError);
+        // Não vamos deslogar por erro de cargo, apenas assume 'user'
+        setRole('user');
       } else if (roleData) {
         setRole(roleData as UserRole);
       } else {
@@ -200,13 +205,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       try {
         // Pega a sessão inicial sem setar loading(true) ainda para não piscar
         const { data: { session }, error } = await supabase.auth.getSession();
-        
+
         if (error) throw error;
 
         if (mounted) {
           setSession(session);
           setUser(session?.user ?? null);
-          
+
           if (session?.user) {
             await fetchUserData(session.user.id);
           }
@@ -218,7 +223,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         await forceLogout();
       } finally {
         if (mounted) {
-            setLoading(false); // GARANTE QUE O LOADING PARA
+          setLoading(false); // GARANTE QUE O LOADING PARA
         }
       }
     };
@@ -231,25 +236,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         // Evita re-processar se for apenas um "TOKEN_REFRESHED" que causa loops
         if (event === 'TOKEN_REFRESHED') {
-            return;
+          return;
         }
 
         console.log("Evento de Auth:", event);
         setSession(session);
         setUser(session?.user ?? null);
-        
+
         if (session?.user) {
-            // Só ativa loading se for um login explícito
-            if (event === 'SIGNED_IN') setLoading(true);
-            
-            await fetchUserData(session.user.id);
-            await refreshData();
-            setLoading(false);
+          // Só ativa loading se for um login explícito
+          if (event === 'SIGNED_IN') setLoading(true);
+
+          await fetchUserData(session.user.id);
+          await refreshData();
+          setLoading(false);
         } else if (event === 'SIGNED_OUT') {
-            setProfile(null);
-            setRole(null);
-            setLoading(false);
-            refreshData(); 
+          setProfile(null);
+          setRole(null);
+          setLoading(false);
+          refreshData();
         }
       }
     );
@@ -268,21 +273,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const signIn = async (email: string, password: string) => {
     try {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        return { error };
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      return { error };
     } catch (e: any) {
-        return { error: e };
+      return { error: e };
     }
   };
 
-  const signUp = async (email: string, password: string, name: string, phone: string, birthDate?: string) => {
+  const signUp = async (email: string, password: string, name: string, phone: string, birthDate?: string, cpf?: string, address?: string) => {
     const redirectUrl = `${window.location.origin}/`;
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: redirectUrl,
-        data: { name, phone, birth_date: birthDate || null },
+        data: { name, phone, birth_date: birthDate || null, cpf: cpf || null, address: address || null },
       },
     });
     return { error };
@@ -357,15 +362,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return bookings.some((b) => b.booking_date === dateStr && b.status !== 'cancelled');
   };
 
-  const calculatePrice = (date: Date) => {
-    const dayOfWeek = date.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6;
-    let basePrice = isWeekend ? 600 : 400;
-    const cleaningFee = 70;
-    if (profile?.has_discount) basePrice = basePrice * 0.8; 
-    const total = basePrice + cleaningFee;
-    return { basePrice, cleaningFee, total };
-  };
+
 
   const createManualClient = async (data: ManualClientData) => {
     const { data: profileData, error } = await supabase.from('profiles').insert({
@@ -389,12 +386,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   return (
     <AppContext.Provider value={{
-        user, session, profile, role, profiles, bookings, expenses, loading,
-        signIn, signUp, signOut, createBooking, updateBookingStatus, updateBooking,
-        addExpense, updateExpense, deleteExpense, grantDiscount, isDateBooked,
-        calculatePrice, refreshData, createManualClient, createManualBooking,
-        getProfileById, getProfileByUserId,
-      }}>
+      user, session, profile, role, profiles, bookings, expenses, loading,
+      signIn, signUp, signOut, createBooking, updateBookingStatus, updateBooking,
+      addExpense, updateExpense, deleteExpense, grantDiscount, isDateBooked,
+      refreshData, createManualClient, createManualBooking,
+      getProfileById, getProfileByUserId,
+    }}>
       {children}
     </AppContext.Provider>
   );
