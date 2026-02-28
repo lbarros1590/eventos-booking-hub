@@ -14,10 +14,11 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   User, Phone, DollarSign, CheckCircle, XCircle, Loader2,
-  Printer, Plus, Trash2, Edit2, Receipt
+  Printer, Plus, Trash2, Edit2, Receipt, ClipboardCheck
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import ChecklistHandoverModal from './ChecklistHandoverModal';
 
 interface BookingDetailsModalProps {
   open: boolean;
@@ -46,6 +47,7 @@ const BookingDetailsModal = ({
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
   const [newChecklistItem, setNewChecklistItem] = useState('');
   const [saving, setSaving] = useState(false);
+  const [checklistOpen, setChecklistOpen] = useState(false);
 
   useEffect(() => {
     if (booking && settings) {
@@ -503,7 +505,7 @@ const BookingDetailsModal = ({
   };
 
 
-  return (
+  return (<>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -667,24 +669,37 @@ const BookingDetailsModal = ({
 
           <Separator />
 
-          {/* Save & Print */}
-          <div className="flex gap-3">
-            <Button
-              onClick={handleSaveBookingDetails}
-              disabled={saving}
-              className="flex-1 bg-gradient-primary hover:opacity-90"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Salvar Alterações
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handlePrint}
-              className="flex-1"
-            >
-              <Printer className="w-4 h-4 mr-2" />
-              Imprimir Contrato
-            </Button>
+          {/* Checklist de Entrega + Save & Print */}
+          <div className="flex flex-col gap-3">
+            {booking.status === 'confirmed' && (
+              <Button
+                onClick={() => setChecklistOpen(true)}
+                className="w-full bg-gradient-primary hover:opacity-90 font-semibold"
+                size="lg"
+              >
+                <ClipboardCheck className="w-5 h-5 mr-2" />
+                Checklist de Entrega
+              </Button>
+            )}
+            <div className="flex gap-3">
+              <Button
+                onClick={handleSaveBookingDetails}
+                disabled={saving}
+                className="flex-1"
+                variant="outline"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Salvar Alterações
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handlePrint}
+                className="flex-1"
+              >
+                <Printer className="w-4 h-4 mr-2" />
+                Reimprimir Contrato
+              </Button>
+            </div>
           </div>
 
           {/* Status Actions */}
@@ -737,7 +752,15 @@ const BookingDetailsModal = ({
         </div>
       </DialogContent>
     </Dialog>
-  );
+
+    <ChecklistHandoverModal
+      open={checklistOpen}
+      onOpenChange={setChecklistOpen}
+      booking={booking}
+      profile={profile}
+      onRefresh={onRefresh}
+    />
+  </>);
 };
 
 export default BookingDetailsModal;
