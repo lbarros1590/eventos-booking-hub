@@ -15,38 +15,7 @@ import { CalendarDays, Check, AlertCircle, Sparkles, Loader2, ChevronLeft, Chevr
 import { cn } from '@/lib/utils';
 
 const LOYALTY_THRESHOLD = 4;
-
-// Função para enviar notificação WhatsApp em segundo plano
-const sendWhatsappNotification = async (clientName: string, bookingDate: string, total: number) => {
-  try {
-    console.log('📤 Enviando notificação WhatsApp...', { clientName, bookingDate, total });
-    const backendUrl = import.meta.env.PROD
-      ? 'https://seu-dominio.com'
-      : 'http://localhost:3001';
-
-
-    const response = await fetch(`${backendUrl}/api/send-whatsapp-notification`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        clientName,
-        bookingDate,
-        total,
-      }),
-    });
-
-    const data = await response.json();
-    console.log('✅ Resposta da API:', data);
-
-    if (!response.ok) {
-      console.error('❌ Erro ao enviar notificação:', response.statusText, data);
-    }
-  } catch (error) {
-    console.error('❌ Erro na requisição de notificação:', error);
-  }
-};
+const OWNER_WHATSAPP = '5565992286607'; // (65) 99228-6607 — EJ Eventos
 
 const NewReservation = () => {
   const { profile } = useAuth();
@@ -100,15 +69,28 @@ const NewReservation = () => {
     if (error) {
       toast.error('Erro ao criar reserva. Tente novamente.');
     } else {
-      // Enviar mensagem WhatsApp para a proprietária em segundo plano
       const clientName = profile.name || 'Cliente';
-      const bookingDate = format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
-      const whatsappMessage = `Olá! Nova reserva solicitada:\n\n*Nome do Cliente:* ${clientName}\n*Data da Reserva:* ${bookingDate}\n*Valor Total:* R$ ${priceInfo.total},00\n\nPor favor, entre em contato para confirmar.`;
+      const clientPhone = profile.phone || 'não informado';
+      const bookingDate = format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+      const depositAmount = Math.round(priceInfo.total / 2);
 
-      // Chamar API em segundo plano (não aguarda a resposta)
-      sendWhatsappNotification(clientName, bookingDate, priceInfo.total).catch(err => {
-        console.error('Erro ao enviar notificação WhatsApp:', err);
-      });
+      // Build WhatsApp message for the owner
+      const msg = encodeURIComponent(
+        `🎉 *Nova Solicitação de Reserva — EJ Eventos*\n\n` +
+        `👤 *Cliente:* ${clientName}\n` +
+        `📞 *Telefone:* ${clientPhone}\n` +
+        `📅 *Data:* ${bookingDate}\n\n` +
+        `💰 *Valores:*\n` +
+        `• Diária: R$ ${priceInfo.basePrice},00\n` +
+        `• Taxa de limpeza: R$ ${priceInfo.cleaningFee},00\n` +
+        (profile.has_discount ? `• Desconto fidelidade: – R$ ${Math.round((priceInfo.basePrice + priceInfo.cleaningFee) * 0.2)},00\n` : '') +
+        `• *Total: R$ ${priceInfo.total},00*\n` +
+        `• Sinal (50%): R$ ${depositAmount},00\n\n` +
+        `⚠️ Reserva aguardando sua confirmação no painel admin.`
+      );
+
+      // Open WhatsApp for the owner
+      window.open(`https://wa.me/${OWNER_WHATSAPP}?text=${msg}`, '_blank');
 
       toast.success('Reserva solicitada com sucesso! Aguarde a confirmação.');
       setSelectedDate(undefined);
