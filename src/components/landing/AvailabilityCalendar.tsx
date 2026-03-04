@@ -130,10 +130,16 @@ const AvailabilityCalendar = () => {
                       booked: (date) => isDateBooked(date),
                       blocked: (date) => isDateBlocked(date),
                       exception: (date) => {
-                        const exception = calendarExceptions.find(e => e.exception_date === date.toISOString().split('T')[0]);
+                        const dateStr = date.toISOString().split('T')[0];
+                        const exception = calendarExceptions.find(e => e.exception_date === dateStr);
                         return !!exception && !exception.is_blocked;
                       },
-                      available: (date) => !isPastDate(date) && !isDateBooked(date) && !isDateBlocked(date),
+                      available: (date) => {
+                        const dateStr = date.toISOString().split('T')[0];
+                        const exception = calendarExceptions.find(e => e.exception_date === dateStr);
+                        const isException = !!exception && !exception.is_blocked;
+                        return !isPastDate(date) && !isDateBooked(date) && !isDateBlocked(date) && !isException;
+                      },
                     }}
                     modifiersStyles={{
                       booked: {
