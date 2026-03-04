@@ -11,6 +11,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Reservations from "./pages/Reservations";
 import Loyalty from "./pages/Loyalty";
+import ClientProfile from "./pages/ClientProfile";
 import Admin from "./pages/Admin";
 import AdminCalendarPage from "./pages/AdminCalendar";
 import AdminFinancialPage from "./pages/AdminFinancial";
@@ -40,6 +41,7 @@ const App = () => (
               <Route path="/dashboard/reservations" element={<Reservations />} />
               <Route path="/dashboard/reservas/nova" element={<Dashboard />} />
               <Route path="/dashboard/loyalty" element={<Loyalty />} />
+              <Route path="/dashboard/profile" element={<ClientProfile />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/admin/calendar" element={<AdminCalendarPage />} />
               <Route path="/admin/financial" element={<AdminFinancialPage />} />

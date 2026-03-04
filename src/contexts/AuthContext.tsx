@@ -17,6 +17,7 @@ export interface Profile {
   reservation_count: number;
   has_discount: boolean;
   loyalty_points: number;
+  is_active: boolean;
 }
 
 interface AuthContextType {
@@ -29,6 +30,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, name: string, phone: string, birthDate?: string, cpf?: string, address?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshUserData: () => Promise<void>;
+  updateProfile: (updates: Partial<Omit<Profile, 'id' | 'user_id' | 'is_active'>>) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -64,6 +66,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (profileError) throw profileError;
 
       if (profileData) {
+        if (profileData.is_active === false) {
+          console.warn("Usuário desativado tentou logar:", userId);
+          // Importing toast is tricky here due to lack of import, but we can rely on standard forceLogout logic
+          // and let the login page show generic errors. However, a throw here triggers forceLogout gracefully.
+          throw new Error('Conta desativada pelo administrador ou pelo próprio usuário.');
+        }
         setProfile(profileData as Profile);
       }
 
@@ -140,6 +148,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return { error };
   };
 
+  const updateProfile = async (updates: Partial<Omit<Profile, 'id' | 'user_id' | 'is_active'>>) => {
+    if (!profile) return { error: new Error('Usuário não logado.') };
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', profile.id);
+
+      if (error) throw error;
+
+      // Refresh local state after successful update
+      if (user) {
+        await fetchUserData(user.id);
+      }
+      return { error: null };
+    } catch (e: any) {
+      console.error('Erro ao atualizar perfil:', e);
+      return { error: e };
+    }
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setSession(null);
@@ -152,7 +181,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   return (
     <AuthContext.Provider value={{
       user, session, profile, role, loading,
-      signIn, signUp, signOut, refreshUserData: () => user ? fetchUserData(user.id) : Promise.resolve()
+      signIn, signUp, signOut, updateProfile, refreshUserData: () => user ? fetchUserData(user.id) : Promise.resolve()
     }}>
       {children}
     </AuthContext.Provider>

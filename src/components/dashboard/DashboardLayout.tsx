@@ -32,6 +32,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { label: 'Nova Reserva', icon: CalendarPlus, path: '/dashboard' },
     { label: 'Minhas Reservas', icon: CalendarDays, path: '/dashboard/reservations' },
     { label: 'Fidelidade', icon: Gift, path: '/dashboard/loyalty' },
+    { label: 'Meu Perfil', icon: User, path: '/dashboard/profile' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -100,8 +101,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 to={item.path}
                 onClick={() => setSidebarOpen(false)}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${isActive(item.path)
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                   }`}
               >
                 <item.icon size={20} />
