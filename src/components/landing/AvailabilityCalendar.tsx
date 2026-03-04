@@ -129,6 +129,10 @@ const AvailabilityCalendar = () => {
                     modifiers={{
                       booked: (date) => isDateBooked(date),
                       blocked: (date) => isDateBlocked(date),
+                      exception: (date) => {
+                        const exception = calendarExceptions.find(e => e.exception_date === date.toISOString().split('T')[0]);
+                        return !!exception && !exception.is_blocked;
+                      },
                       available: (date) => !isPastDate(date) && !isDateBooked(date) && !isDateBlocked(date),
                     }}
                     modifiersStyles={{
@@ -142,6 +146,11 @@ const AvailabilityCalendar = () => {
                         color: 'hsl(var(--muted-foreground))',
                         textDecoration: 'line-through',
                         cursor: 'not-allowed',
+                      },
+                      exception: {
+                        color: 'white',
+                        backgroundColor: '#f59e0b', // amber-500
+                        fontWeight: 'bold',
                       },
                       available: {
                         backgroundColor: 'hsl(142 76% 36% / 0.1)',
@@ -162,6 +171,10 @@ const AvailabilityCalendar = () => {
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 rounded bg-success/20 border border-success" />
                         <span className="text-sm text-muted-foreground">Disponível</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded bg-amber-500" />
+                        <span className="text-sm text-muted-foreground">Feriado Especial</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 rounded bg-destructive" />
