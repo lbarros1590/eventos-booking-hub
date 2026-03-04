@@ -246,14 +246,30 @@ const NewReservation = () => {
                 modifiers={{
                   booked: (date) => isDateBooked(date),
                   blocked: (date) => isDateBlocked(date),
+                  exception: (date) => {
+                    const exception = calendarExceptions.find(e => e.exception_date === date.toISOString().split('T')[0]);
+                    return !!exception && !exception.is_blocked;
+                  }
                 }}
                 modifiersStyles={{
-                  booked: { backgroundColor: 'hsl(var(--destructive))', color: 'white' },
-                  blocked: { backgroundColor: 'hsl(var(--muted))', color: 'hsl(var(--muted-foreground))', textDecoration: 'line-through' },
+                  booked: { color: 'white', backgroundColor: '#ef4444' }, // red-500
+                  blocked: { color: 'white', backgroundColor: '#ef4444' }, // red-500
+                  exception: { color: 'white', backgroundColor: '#f59e0b', fontWeight: 'bold' } // amber-500
                 }}
                 className="rounded-md border w-full pointer-events-auto"
                 locale={ptBR}
               />
+
+              <div className="flex justify-center gap-4 text-sm mt-4 text-muted-foreground flex-wrap">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500" />
+                  <span>Indisponível</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-amber-500" />
+                  <span>Feriado / Data Especial</span>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -270,111 +286,132 @@ const NewReservation = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {selectedDate && priceInfo && (
-                <div className="p-4 bg-primary/5 rounded-xl space-y-2">
-                  <p className="font-medium text-foreground">
-                    Data selecionada: {format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                  </p>
+            {selectedDate && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+                <div className="p-4 bg-muted rounded-xl space-y-3">
+                  <div className="flex items-center gap-2 font-medium">
+                    <CalendarDays className="w-4 h-4 text-primary" />
+                    {format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                  </div>
 
-                  {role === 'admin' && (
-                    <div className="p-3 mb-4 bg-accent/10 border border-accent/20 rounded-lg space-y-3">
-                      <div className="flex items-center gap-2 font-medium text-accent mb-2">
-                        <DollarSign className="w-4 h-4" />
-                        Controles de Administrador
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Isentar Taxa de Limpeza</span>
-                        <Switch checked={waiveCleaningFee} onCheckedChange={setWaiveCleaningFee} />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Sobrescrever Preço Final (R$)</Label>
-                        <Input
-                          type="number"
-                          placeholder="Ex: 500"
-                          value={manualPriceOverride}
-                          onChange={(e) => setManualPriceOverride(e.target.value)}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Diária:</span>
-                      <span>R$ {priceInfo.basePrice},00</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Taxa de limpeza:</span>
-                      <span className={waiveCleaningFee ? 'line-through text-muted-foreground' : ''}>
-                        {waiveCleaningFee ? `R$ ${priceInfo.cleaningFee},00 (Isento)` : `R$ ${priceInfo.cleaningFee},00`}
-                      </span>
-                    </div>
-                    {profile?.has_discount && (!manualPriceOverride || isNaN(parseFloat(manualPriceOverride))) && (
-                      <div className="flex justify-between text-accent">
-                        <span>Desconto fidelidade (20%):</span>
-                        <span>- R$ {Math.round((priceInfo.basePrice + (waiveCleaningFee ? 0 : priceInfo.cleaningFee)) * 0.2)},00</span>
-                      </div>
-                    )}
-
-                    {(() => {
-                      const baseCurrent = priceInfo.basePrice + (waiveCleaningFee ? 0 : priceInfo.cleaningFee);
-                      const hasManual = manualPriceOverride && !isNaN(parseFloat(manualPriceOverride));
-                      const discountCurrent = profile?.has_discount && !hasManual ? Math.round(baseCurrent * 0.2) : 0;
-                      const finalCurrent = hasManual ? parseFloat(manualPriceOverride) : baseCurrent - discountCurrent;
+                  {(() => {
+                    const currentException = calendarExceptions.find(e => e.exception_date === selectedDate.toISOString().split('T')[0]);
+                    if (currentException && currentException.note && !currentException.is_blocked) {
                       return (
-                        <>
-                          <div className="flex justify-between font-bold text-lg pt-2 border-t border-border">
-                            <span>Total:</span>
-                            <span className="text-primary">R$ {finalCurrent},00</span>
+                        <div className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 p-3 rounded-lg text-sm font-medium flex gap-2 items-start border border-amber-200 dark:border-amber-800">
+                          <span className="text-xl">🎉</span>
+                          <div>
+                            <span className="block mb-1">Feriado ou Data Especial:</span>
+                            <span className="font-bold">{currentException.note}</span>
                           </div>
-                          <div className="flex justify-between text-sm pt-2 border-t border-border">
-                            <span className="text-muted-foreground">Sinal (50%):</span>
-                            <span className="font-semibold text-accent">R$ {Math.round(finalCurrent / 2)},00</span>
-                          </div>
-                        </>
+                        </div>
                       );
-                    })()}
+                    }
+                    return null;
+                  })()}
+
+                  {priceInfo ? (
+                    <div className="p-4 bg-primary/5 rounded-xl space-y-2">
+                      {role === 'admin' && (
+                        <div className="p-3 mb-4 bg-accent/10 border border-accent/20 rounded-lg space-y-3">
+                          <div className="flex items-center gap-2 font-medium text-accent mb-2">
+                            <DollarSign className="w-4 h-4" />
+                            Controles de Administrador
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Isentar Taxa de Limpeza</span>
+                            <Switch checked={waiveCleaningFee} onCheckedChange={setWaiveCleaningFee} />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Sobrescrever Preço Final (R$)</Label>
+                            <Input
+                              type="number"
+                              placeholder="Ex: 500"
+                              value={manualPriceOverride}
+                              onChange={(e) => setManualPriceOverride(e.target.value)}
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Diária:</span>
+                          <span>R$ {priceInfo.basePrice},00</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Taxa de limpeza:</span>
+                          <span className={waiveCleaningFee ? 'line-through text-muted-foreground' : ''}>
+                            {waiveCleaningFee ? `R$ ${priceInfo.cleaningFee},00 (Isento)` : `R$ ${priceInfo.cleaningFee},00`}
+                          </span>
+                        </div>
+                        {profile?.has_discount && (!manualPriceOverride || isNaN(parseFloat(manualPriceOverride))) && (
+                          <div className="flex justify-between text-accent">
+                            <span>Desconto fidelidade (20%):</span>
+                            <span>- R$ {Math.round((priceInfo.basePrice + (waiveCleaningFee ? 0 : priceInfo.cleaningFee)) * 0.2)},00</span>
+                          </div>
+                        )}
+
+                        {(() => {
+                          const baseCurrent = priceInfo.basePrice + (waiveCleaningFee ? 0 : priceInfo.cleaningFee);
+                          const hasManual = manualPriceOverride && !isNaN(parseFloat(manualPriceOverride));
+                          const discountCurrent = profile?.has_discount && !hasManual ? Math.round(baseCurrent * 0.2) : 0;
+                          const finalCurrent = hasManual ? parseFloat(manualPriceOverride) : baseCurrent - discountCurrent;
+                          return (
+                            <>
+                              <div className="flex justify-between font-bold text-lg pt-2 border-t border-border">
+                                <span>Total:</span>
+                                <span className="text-primary">R$ {finalCurrent},00</span>
+                              </div>
+                              <div className="flex justify-between text-sm pt-2 border-t border-border">
+                                <span className="text-muted-foreground">Sinal (50%):</span>
+                                <span className="font-semibold text-accent">R$ {Math.round(finalCurrent / 2)},00</span>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className="space-y-3 border-t border-border pt-4">
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        id="terms"
+                        checked={termsAccepted}
+                        onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
+                      />
+                      <Label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer">
+                        Li e aceito os termos de uso do espaço. Me comprometo a devolver o espaço
+                        nas mesmas condições em que o recebi.
+                      </Label>
+                    </div>
                   </div>
                 </div>
-              )}
 
-              <div className="space-y-3 border-t border-border pt-4">
-                <div className="flex items-start gap-3">
-                  <Checkbox
-                    id="terms"
-                    checked={termsAccepted}
-                    onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
-                  />
-                  <Label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer">
-                    Li e aceito os termos de uso do espaço. Me comprometo a devolver o espaço
-                    nas mesmas condições em que o recebi.
-                  </Label>
+                <div className="p-4 bg-muted rounded-xl flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-muted-foreground">
+                    <p className="font-medium text-foreground mb-1">Importante:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>Duração do evento: 12 horas</li>
+                      <li>{settings?.payment_terms_text || '50% no ato da reserva, 50% na entrega das chaves.'}</li>
+                      <li>Cancelamento gratuito até 7 dias antes</li>
+                    </ul>
+                  </div>
                 </div>
-              </div>
 
-              <div className="p-4 bg-muted rounded-xl flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-muted-foreground">
-                  <p className="font-medium text-foreground mb-1">Importante:</p>
-                  <ul className="list-disc list-inside space-y-1">
-                    <li>Duração do evento: 12 horas</li>
-                    <li>{settings?.payment_terms_text || '50% no ato da reserva, 50% na entrega das chaves.'}</li>
-                    <li>Cancelamento gratuito até 7 dias antes</li>
-                  </ul>
-                </div>
+                <Button
+                  className="w-full bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-primary"
+                  size="lg"
+                  disabled={!termsAccepted || submitting}
+                  onClick={handleSubmit}
+                >
+                  {submitting ? 'Processando...' : 'Solicitar Reserva'}
+                </Button>
               </div>
-
-              <Button
-                className="w-full bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-primary"
-                size="lg"
-                disabled={!isFormValid || submitting}
-                onClick={handleSubmit}
-              >
-                {submitting ? 'Processando...' : 'Solicitar Reserva'}
-              </Button>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>

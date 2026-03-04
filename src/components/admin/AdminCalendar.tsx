@@ -162,34 +162,31 @@ const AdminCalendar = () => {
               selected={selectedDate}
               onSelect={handleDateClick}
               modifiers={{
-                booked: bookedDates,
-                blocked: blockedDates,
+                booked: (date) => bookedDates.some((d) => d.getTime() === date.getTime()),
+                blocked: (date) => blockedDates.some((d) => d.getTime() === date.getTime()),
+                exception: (date) => {
+                  const exception = getExceptionForDate(date);
+                  return !!exception && !exception.is_blocked;
+                }
               }}
               modifiersStyles={{
-                booked: {
-                  backgroundColor: 'hsl(var(--primary))',
-                  color: 'white',
-                  fontWeight: 'bold',
-                },
-                blocked: {
-                  backgroundColor: 'hsl(var(--muted))',
-                  color: 'hsl(var(--muted-foreground))',
-                  textDecoration: 'line-through',
-                },
+                booked: { color: 'white', backgroundColor: '#ef4444' }, // red-500
+                blocked: { color: 'white', backgroundColor: '#ef4444' }, // red-500
+                exception: { color: 'white', backgroundColor: '#f59e0b', fontWeight: 'bold' } // amber-500
               }}
               className="rounded-md border w-full pointer-events-auto"
               locale={ptBR}
             />
 
             {/* Legend */}
-            <div className="mt-4 flex flex-wrap gap-4 text-sm">
+            <div className="flex justify-center gap-4 text-sm mt-4 text-muted-foreground flex-wrap">
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-primary" />
-                <span className="text-muted-foreground">Reservado</span>
+                <div className="w-3 h-3 rounded-full bg-red-500" />
+                <span>Indisponível (Reservado/Bloqueado)</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-muted" />
-                <span className="text-muted-foreground">Bloqueado</span>
+                <div className="w-3 h-3 rounded-full bg-amber-500" />
+                <span>Feriado / Data Especial</span>
               </div>
             </div>
           </CardContent>
