@@ -261,18 +261,7 @@ function generateContractHTML(
     </div>
   </div>
 
-  <div class="signatures" style="margin-top: 60px;">
-    <div class="signature-line">
-      <strong>TESTEMUNHA 1</strong>
-      <span>Nome: _______________________________</span>
-      <span>CPF: ________________________________</span>
-    </div>
-    <div class="signature-line">
-      <strong>TESTEMUNHA 2</strong>
-      <span>Nome: _______________________________</span>
-      <span>CPF: ________________________________</span>
-    </div>
-  </div>
+
 
   <p style="text-align: center; margin-top: 20px; font-size: 10px; color: #bbb;">
     Reserva nº ${booking.id.substring(0, 8).toUpperCase()} — Documento gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}.

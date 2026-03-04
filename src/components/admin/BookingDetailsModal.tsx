@@ -440,7 +440,7 @@ const BookingDetailsModal = ({
         </div>
 
         <p class="mt-20 text-justify">
-          E, por estarem assim justos e contratados, as partes assinam o presente instrumento em 2 (duas) vias de igual teor e forma, na presença das duas testemunhas abaixo, para que produza seus devidos e legais efeitos.
+          E, por estarem assim justos e contratados, as partes assinam o presente instrumento em 2 (duas) vias de igual teor e forma.
         </p>
 
         <p style="margin-top: 30px; text-align: right;">
@@ -460,18 +460,7 @@ const BookingDetailsModal = ({
           </div>
         </div>
 
-        <div class="signatures" style="margin-top: 60px;">
-          <div class="signature-line">
-            <strong>TESTEMUNHA 1</strong>
-            <span>Nome: _______________________________</span>
-            <span>CPF: ________________________________</span>
-          </div>
-          <div class="signature-line">
-            <strong>TESTEMUNHA 2</strong>
-            <span>Nome: _______________________________</span>
-            <span>CPF: ________________________________</span>
-          </div>
-        </div>
+
 
         <p style="text-align: center; margin-top: 20px; font-size: 10px; color: #bbb;">
           Reserva nº ${booking.id.substring(0, 8).toUpperCase()} – Documento gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}.
@@ -745,6 +734,17 @@ const BookingDetailsModal = ({
                   Cancelar
                 </Button>
               </>
+            )}
+            {booking.status === 'completed' && (
+              <Button
+                variant="destructive"
+                onClick={() => handleStatusChange('cancelled')}
+                disabled={updating}
+                className="col-span-2"
+              >
+                {updating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
+                Cancelar Reserva (devolver pagamento)
+              </Button>
             )}
           </div>
 
