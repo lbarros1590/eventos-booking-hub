@@ -24,6 +24,12 @@ export interface VenueSettings {
   payment_terms_text: string;
   default_checklist_items: ChecklistItem[];
   amenities_list: Amenity[];
+  owner_whatsapp: string;
+  owner_name: string;
+  owner_instagram: string | null;
+  owner_facebook: string | null;
+  owner_email: string | null;
+  venue_address: string | null;
 }
 
 export interface CalendarException {
@@ -56,6 +62,12 @@ export const useVenueSettings = () => {
           gallery_urls: (data.gallery_urls as string[]) || [],
           payment_terms_text: (data.payment_terms_text as string) || '50% no ato da reserva, 50% na entrega das chaves.',
           default_checklist_items: (data.default_checklist_items as unknown as ChecklistItem[]) || [],
+          owner_whatsapp: (data as any).owner_whatsapp || '5565992286607',
+          owner_name: (data as any).owner_name || 'EJ Eventos',
+          owner_instagram: (data as any).owner_instagram || null,
+          owner_facebook: (data as any).owner_facebook || null,
+          owner_email: (data as any).owner_email || null,
+          venue_address: (data as any).venue_address || null,
         });
       }
     } catch (error) {
@@ -141,7 +153,7 @@ export const useVenueSettings = () => {
   };
 
   const calculatePriceForDate = (
-    date: Date, 
+    date: Date,
     hasLoyaltyDiscount: boolean = false,
     waiveCleaningFee: boolean = false
   ): { basePrice: number; cleaningFee: number; total: number; deposit: number } => {

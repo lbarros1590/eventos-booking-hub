@@ -6,19 +6,25 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useVenueSettings } from '@/hooks/useVenueSettings';
 import { toast } from 'sonner';
-import { Settings, DollarSign, Percent, Loader2, FileText } from 'lucide-react';
+import { Settings, DollarSign, Percent, Loader2, FileText, Phone, Instagram, Facebook, Mail, MapPin } from 'lucide-react';
 import GalleryManager from './GalleryManager';
 
 const AdminSettings = () => {
   const { settings, loading, updateSettings, refreshSettings } = useVenueSettings();
   const [saving, setSaving] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     base_price_weekday: 400,
     base_price_weekend: 600,
     cleaning_fee: 70,
     global_discount_percent: 0,
     payment_terms_text: '50% no ato da reserva, 50% na entrega das chaves.',
+    owner_whatsapp: '5565992286607',
+    owner_name: 'EJ Eventos',
+    owner_instagram: '',
+    owner_facebook: '',
+    owner_email: '',
+    venue_address: '',
   });
 
   useEffect(() => {
@@ -29,12 +35,19 @@ const AdminSettings = () => {
         cleaning_fee: settings.cleaning_fee,
         global_discount_percent: settings.global_discount_percent,
         payment_terms_text: settings.payment_terms_text || '50% no ato da reserva, 50% na entrega das chaves.',
+        owner_whatsapp: settings.owner_whatsapp || '5565992286607',
+        owner_name: settings.owner_name || 'EJ Eventos',
+        owner_instagram: settings.owner_instagram || '',
+        owner_facebook: settings.owner_facebook || '',
+        owner_email: settings.owner_email || '',
+        venue_address: settings.venue_address || '',
       });
     }
   }, [settings]);
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
-    if (field === 'payment_terms_text') {
+    if (field === 'payment_terms_text' || field === 'owner_whatsapp' || field === 'owner_name' ||
+      field === 'owner_instagram' || field === 'owner_facebook' || field === 'owner_email' || field === 'venue_address') {
       setFormData(prev => ({ ...prev, [field]: value }));
     } else {
       setFormData(prev => ({ ...prev, [field]: parseFloat(value) || 0 }));
@@ -44,7 +57,7 @@ const AdminSettings = () => {
   const handleSave = async () => {
     setSaving(true);
     const { error } = await updateSettings(formData as any);
-    
+
     if (error) {
       toast.error('Erro ao salvar configurações');
     } else {
@@ -167,7 +180,7 @@ const AdminSettings = () => {
                   Desconto de {formData.global_discount_percent}% ativo!
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Diária Seg-Qui: R$ {Math.round(formData.base_price_weekday * (1 - formData.global_discount_percent / 100))} | 
+                  Diária Seg-Qui: R$ {Math.round(formData.base_price_weekday * (1 - formData.global_discount_percent / 100))} |
                   Diária Sex-Dom: R$ {Math.round(formData.base_price_weekend * (1 - formData.global_discount_percent / 100))}
                 </p>
               </div>
@@ -193,6 +206,88 @@ const AdminSettings = () => {
               placeholder="Ex: 50% no ato da reserva, 50% na entrega das chaves."
               rows={3}
             />
+          </CardContent>
+        </Card>
+
+        {/* Contact Info */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Phone className="w-5 h-5 text-primary" />
+              Informações de Contato
+            </CardTitle>
+            <CardDescription>
+              Dados da proprietária exibidos no site e usados nas mensagens de WhatsApp
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="owner_name">Nome / Razão Social</Label>
+                <Input
+                  id="owner_name"
+                  value={formData.owner_name}
+                  onChange={(e) => handleInputChange('owner_name', e.target.value)}
+                  placeholder="EJ Eventos"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="owner_whatsapp" className="flex items-center gap-1">
+                  <Phone className="w-3.5 h-3.5" /> WhatsApp (com DDI, ex: 5565999999999)
+                </Label>
+                <Input
+                  id="owner_whatsapp"
+                  value={formData.owner_whatsapp}
+                  onChange={(e) => handleInputChange('owner_whatsapp', e.target.value)}
+                  placeholder="5565992286607"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="owner_instagram" className="flex items-center gap-1">
+                  <Instagram className="w-3.5 h-3.5" /> Instagram (usuário)
+                </Label>
+                <Input
+                  id="owner_instagram"
+                  value={formData.owner_instagram}
+                  onChange={(e) => handleInputChange('owner_instagram', e.target.value)}
+                  placeholder="@ejeventos"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="owner_facebook" className="flex items-center gap-1">
+                  <Facebook className="w-3.5 h-3.5" /> Facebook (usuário ou link)
+                </Label>
+                <Input
+                  id="owner_facebook"
+                  value={formData.owner_facebook}
+                  onChange={(e) => handleInputChange('owner_facebook', e.target.value)}
+                  placeholder="EJ Eventos"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="owner_email" className="flex items-center gap-1">
+                  <Mail className="w-3.5 h-3.5" /> E-mail de contato
+                </Label>
+                <Input
+                  id="owner_email"
+                  type="email"
+                  value={formData.owner_email}
+                  onChange={(e) => handleInputChange('owner_email', e.target.value)}
+                  placeholder="contato@ejeventos.com.br"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="venue_address" className="flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5" /> Endereço do Espaço
+                </Label>
+                <Input
+                  id="venue_address"
+                  value={formData.venue_address}
+                  onChange={(e) => handleInputChange('venue_address', e.target.value)}
+                  placeholder="R. dos Cravos, 174 – Serra Dourada, Cuiabá – MT"
+                />
+              </div>
+            </div>
           </CardContent>
         </Card>
 

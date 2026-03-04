@@ -17,7 +17,6 @@ import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 
 const LOYALTY_THRESHOLD = 4;
-const OWNER_WHATSAPP = '5565992286607'; // (65) 99228-6607 — EJ Eventos
 
 const NewReservation = () => {
   const { profile, role } = useAuth();
@@ -53,6 +52,11 @@ const NewReservation = () => {
     if (!selectedDate || !priceInfo || !profile) return;
 
     setSubmitting(true);
+
+    // Open WhatsApp window NOW (before async calls) to avoid browser popup blocking.
+    // Browsers block window.open() called after await. We open it early, then set the URL on success.
+    const ownerWhatsApp = settings?.owner_whatsapp || '5565992286607';
+    const waPopup = window.open('', '_blank');
 
     const baseCalc = priceInfo.basePrice + (waiveCleaningFee ? 0 : priceInfo.cleaningFee);
     const hasManualOverride = manualPriceOverride && !isNaN(parseFloat(manualPriceOverride));
@@ -101,8 +105,12 @@ const NewReservation = () => {
         `⚠️ Reserva aguardando sua confirmação no painel admin.`
       );
 
-      // Open WhatsApp for the owner
-      window.open(`https://wa.me/${OWNER_WHATSAPP}?text=${msg}`, '_blank');
+      // Navigate the pre-opened window to WhatsApp (avoids popup blocking)
+      if (waPopup) {
+        waPopup.location.href = `https://wa.me/${ownerWhatsApp}?text=${msg}`;
+      } else {
+        window.open(`https://wa.me/${ownerWhatsApp}?text=${msg}`, '_blank');
+      }
 
       toast.success('Reserva solicitada com sucesso! Aguarde a confirmação.');
       setSelectedDate(undefined);
