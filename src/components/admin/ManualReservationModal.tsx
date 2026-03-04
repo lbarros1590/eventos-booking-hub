@@ -44,13 +44,18 @@ const ManualReservationModal = ({
 
   const priceInfo = selectedDate ? calculatePriceForDate(selectedDate, false) : null;
 
-  useEffect(() => {
-    if (selectedDate && priceInfo) {
-      setCustomPrice(priceInfo.total.toString());
-    }
-  }, [selectedDate, priceInfo]);
-
   const [waiveCleaningFee, setWaiveCleaningFee] = useState(false);
+
+  // Suggested price = base + cleaning fee (adjusted by waive switch)
+  const suggestedPrice = priceInfo
+    ? priceInfo.basePrice + (waiveCleaningFee ? 0 : priceInfo.cleaningFee)
+    : 0;
+
+  // finalPrice: use manual override if admin typed something, otherwise use suggested
+  const finalPrice = customPrice !== '' && !isNaN(parseFloat(customPrice))
+    ? parseFloat(customPrice)
+    : suggestedPrice;
+  const depositAmount = Math.round(finalPrice / 2);
 
   // Reset form when modal closes
   useEffect(() => {
@@ -110,12 +115,9 @@ const ManualReservationModal = ({
       return;
     }
 
-    const price = parseFloat(customPrice);
-    const hasCustomPrice = !isNaN(price);
-
-    // Calcula o preço caso não exista preço customizado
-    const baseCalc = priceInfo ? priceInfo.basePrice + (waiveCleaningFee ? 0 : priceInfo.cleaningFee) : 0;
-    const finalTotal = hasCustomPrice ? price : baseCalc;
+    const hasCustomPrice = customPrice !== '' && !isNaN(parseFloat(customPrice));
+    const price = hasCustomPrice ? parseFloat(customPrice) : suggestedPrice;
+    const finalTotal = price;
 
     // Status is determined by deposit payment
     const status = depositReceived ? 'confirmed' : 'pending';
@@ -129,7 +131,7 @@ const ManualReservationModal = ({
       total_price: finalTotal,
       status,
       deposit_paid: depositReceived,
-      manual_price_override: hasCustomPrice ? price : null,
+      manual_price_override: hasCustomPrice ? parseFloat(customPrice) : null,
       waive_cleaning_fee: waiveCleaningFee,
       payment_method: paymentMethod || null,
       origin: 'admin_manual',
@@ -144,10 +146,6 @@ const ManualReservationModal = ({
     }
     setLoading(false);
   };
-
-  const baseAmount = priceInfo ? priceInfo.basePrice + (waiveCleaningFee ? 0 : priceInfo.cleaningFee) : 0;
-  const finalPrice = customPrice && !isNaN(parseFloat(customPrice)) ? parseFloat(customPrice) : baseAmount;
-  const depositAmount = Math.round(finalPrice / 2);
 
   // Sort profiles alphabetically
   const sortedProfiles = [...profiles].sort((a, b) => a.name.localeCompare(b.name));
@@ -280,19 +278,25 @@ const ManualReservationModal = ({
             </div>
             {priceInfo && (
               <div className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Isentar taxa de limpeza (R$ {priceInfo.cleaningFee})</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">Taxa de limpeza (R$ {priceInfo.cleaningFee})</span>
+                    {waiveCleaningFee && <span className="text-xs text-success font-medium">Isento</span>}
                     <Switch
                       checked={waiveCleaningFee}
-                      onCheckedChange={setWaiveCleaningFee}
-                      className="scale-75"
+                      onCheckedChange={(v) => {
+                        setWaiveCleaningFee(v);
+                        // Se não há override manual, limpa o campo para o cálculo automático refletir
+                        if (customPrice === '') setCustomPrice('');
+                      }}
                     />
-                    {waiveCleaningFee && <span className="text-xs text-accent">(Isento)</span>}
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Preço sugerido (Diária + Limpeza): R$ {priceInfo.basePrice + (waiveCleaningFee ? 0 : priceInfo.cleaningFee)}
+                  Preço sugerido: R$ {suggestedPrice.toFixed(2).replace('.', ',')} &nbsp;
+                  {customPrice !== '' && !isNaN(parseFloat(customPrice)) && (
+                    <span className="text-accent">(override manual ativo)</span>
+                  )}
                 </p>
               </div>
             )}
