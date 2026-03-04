@@ -671,34 +671,36 @@ const BookingDetailsModal = ({
 
           {/* Checklist de Entrega + Save & Print */}
           <div className="flex flex-col gap-3">
-            {booking.status === 'confirmed' && (
+            {(booking.status === 'confirmed' || booking.status === 'completed') && (
               <Button
                 onClick={() => setChecklistOpen(true)}
                 className="w-full bg-gradient-primary hover:opacity-90 font-semibold"
                 size="lg"
               >
                 <ClipboardCheck className="w-5 h-5 mr-2" />
-                Checklist de Entrega
+                {booking.status === 'confirmed' ? 'Realizar Checklist de Entrega' : 'Ver Checklist e Compartilhar'}
               </Button>
             )}
             <div className="flex gap-3">
               <Button
                 onClick={handleSaveBookingDetails}
-                disabled={saving}
+                disabled={saving || booking.status === 'completed'}
                 className="flex-1"
                 variant="outline"
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 Salvar Alterações
               </Button>
-              <Button
-                variant="outline"
-                onClick={handlePrint}
-                className="flex-1"
-              >
-                <Printer className="w-4 h-4 mr-2" />
-                Reimprimir Contrato
-              </Button>
+              {(!booking.status || booking.status !== 'completed' || !(booking as any).checklist_data || ((booking as any).checklist_data as any[]).length === 0) && (
+                <Button
+                  variant="outline"
+                  onClick={handlePrint}
+                  className="flex-1"
+                >
+                  <Printer className="w-4 h-4 mr-2" />
+                  Imprimir Contrato Padrão
+                </Button>
+              )}
             </div>
           </div>
 

@@ -321,6 +321,20 @@ const ChecklistHandoverModal = ({
             const invIds = new Set(inventoryItems.map(i => i.id));
             setEntries(existing.filter(e => invIds.has(e.id)));
             setCustomItems(existing.filter(e => !invIds.has(e.id)));
+
+            if (booking.status === 'completed' && (booking as any).checklist_confirmed) {
+                setPhase('share');
+
+                // Regenerate HTML to make print available in viewing mode
+                const html = generateContractHTML(
+                    booking, profile, fullProfile, existing,
+                    Math.round((Number(booking.total_price) || Number(booking.price) + (booking.waive_cleaning_fee ? 0 : Number(booking.cleaning_fee))) / 2),
+                    (Number(booking.total_price) || Number(booking.price) + (booking.waive_cleaning_fee ? 0 : Number(booking.cleaning_fee))) - ((booking as any).deposit_paid ? Math.round((Number(booking.total_price) || Number(booking.price) + (booking.waive_cleaning_fee ? 0 : Number(booking.cleaning_fee))) / 2) : 0),
+                    (booking as any).deposit_paid || false,
+                    (booking as any).final_balance_paid || false
+                );
+                setContractHtml(html);
+            }
         } else if (inventoryItems.length > 0) {
             setEntries(buildInventoryEntries(inventoryItems));
         }
@@ -495,10 +509,10 @@ const ChecklistHandoverModal = ({
                     key={s}
                     onClick={() => onUpdate(entry.id, 'status', s)}
                     className={`px-2 py-1 rounded-md text-xs font-medium transition-all border ${entry.status === s
-                            ? s === 'ok' ? 'bg-success text-white border-success'
-                                : s === 'observation' ? 'bg-warning text-white border-warning'
-                                    : 'bg-destructive text-white border-destructive'
-                            : 'bg-background text-muted-foreground border-border hover:border-foreground'
+                        ? s === 'ok' ? 'bg-success text-white border-success'
+                            : s === 'observation' ? 'bg-warning text-white border-warning'
+                                : 'bg-destructive text-white border-destructive'
+                        : 'bg-background text-muted-foreground border-border hover:border-foreground'
                         }`}
                 >
                     {s === 'ok' ? '✓ OK' : s === 'observation' ? '⚠ Obs.' : '✗ Prob.'}
@@ -681,7 +695,9 @@ const ChecklistHandoverModal = ({
                                 <CheckCircle className="w-9 h-9 text-success" />
                             </div>
                             <div>
-                                <p className="text-lg font-semibold">Entrega confirmada!</p>
+                                <p className="text-lg font-semibold">
+                                    {booking.status === 'completed' ? 'Checklist e Contrato' : 'Entrega confirmada!'}
+                                </p>
                                 <p className="text-muted-foreground text-sm">Contrato gerado e salvo. Compartilhe com as partes.</p>
                             </div>
                         </div>
