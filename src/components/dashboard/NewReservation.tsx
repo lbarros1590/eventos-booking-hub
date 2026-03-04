@@ -91,18 +91,17 @@ const NewReservation = () => {
 
       // Build WhatsApp message for the owner
       const msg = encodeURIComponent(
-        `🎉 *Nova Solicitação de Reserva — EJ Eventos*\n\n` +
-        `👤 *Cliente:* ${clientName}\n` +
-        `📞 *Telefone:* ${clientPhone}\n` +
-        `📅 *Data:* ${bookingDate}\n\n` +
-        `💰 *Valores:*\n` +
+        `Olá! Tudo bem? 😊 Me chamo *${clientName}* e acabei de fazer uma solicitação de reserva pelo site de vocês!\n\n` +
+        `📅 *Data que escolhi:* ${bookingDate}\n` +
+        `📞 *Meu telefone:* ${clientPhone}\n\n` +
+        `Gostaria de confirmar a disponibilidade e combinar o pagamento do sinal. Os valores que apareceram foram:\n\n` +
+        `💰 *Resumo do valor:*\n` +
         `• Diária: R$ ${priceInfo.basePrice},00\n` +
-        `• Taxa de limpeza: R$ ${waiveCleaningFee ? '0 (Isento)' : priceInfo.cleaningFee + ',00'}\n` +
-        (profile.has_discount && !hasManualOverrideMsg ? `• Desconto fidelidade: – R$ ${Math.round(baseCalc * 0.2)},00\n` : '') +
-        (hasManualOverrideMsg ? `• Preço Sobrescrito: R$ ${parseFloat(manualPriceOverride)},00\n` : '') +
+        (waiveCleaningFee ? `` : `• Taxa de limpeza: R$ ${priceInfo.cleaningFee},00\n`) +
+        (profile.has_discount && !hasManualOverrideMsg ? `• Desconto fidelidade (20%): – R$ ${Math.round(baseCalc * 0.2)},00\n` : '') +
         `• *Total: R$ ${finalTotal},00*\n` +
         `• Sinal (50%): R$ ${depositAmount},00\n\n` +
-        `⚠️ Reserva aguardando sua confirmação no painel admin.`
+        `Aguardo o retorno de vocês! 🙏`
       );
 
       // Navigate the pre-opened window to WhatsApp (avoids popup blocking)
