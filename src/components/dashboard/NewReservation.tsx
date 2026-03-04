@@ -9,22 +9,28 @@ import { useData } from '@/contexts/DataContext';
 import { useVenueSettings } from '@/hooks/useVenueSettings';
 import { getIcon } from '@/lib/icons';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarDays, Check, AlertCircle, Sparkles, Loader2, ChevronLeft, ChevronRight, Image } from 'lucide-react';
+import { format } from 'date-fns';
+import { CalendarDays, Check, AlertCircle, Sparkles, Loader2, ChevronLeft, ChevronRight, Image, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
 
 const LOYALTY_THRESHOLD = 4;
 const OWNER_WHATSAPP = '5565992286607'; // (65) 99228-6607 — EJ Eventos
 
 const NewReservation = () => {
-  const { profile } = useAuth();
+  const { profile, role } = useAuth();
   const { isDateBooked, createBooking } = useData();
   const { settings, calendarExceptions, calculatePriceForDate, isDateBlocked, loading } = useVenueSettings();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
+
+  // Admin controls
+  const [waiveCleaningFee, setWaiveCleaningFee] = useState(false);
+  const [manualPriceOverride, setManualPriceOverride] = useState<string>('');
 
   const priceInfo = selectedDate ? calculatePriceForDate(selectedDate, profile?.has_discount) : null;
   const galleryUrls = settings?.gallery_urls || [];
@@ -48,20 +54,24 @@ const NewReservation = () => {
 
     setSubmitting(true);
 
+    const baseCalc = priceInfo.basePrice + (waiveCleaningFee ? 0 : priceInfo.cleaningFee);
+    const hasManualOverride = manualPriceOverride && !isNaN(parseFloat(manualPriceOverride));
+    const finalTotal = hasManualOverride ? parseFloat(manualPriceOverride) : baseCalc - (profile?.has_discount ? Math.round(baseCalc * 0.2) : 0);
+
     const { error } = await createBooking({
       booking_date: selectedDate.toISOString().split('T')[0],
       price: priceInfo.basePrice,
       cleaning_fee: priceInfo.cleaningFee,
-      total_price: priceInfo.total,
+      total_price: finalTotal,
       status: 'pending',
       checklist_confirmed: true,
       terms_accepted: termsAccepted,
       deposit_paid: false,
       final_balance_paid: false,
-      manual_price_override: null,
-      waive_cleaning_fee: false,
+      manual_price_override: hasManualOverride ? parseFloat(manualPriceOverride) : null,
+      waive_cleaning_fee: waiveCleaningFee,
       custom_checklist_items: null,
-      discount_applied: profile?.has_discount ? Math.round((priceInfo.basePrice + priceInfo.cleaningFee) * 0.2) : 0,
+      discount_applied: profile?.has_discount && !hasManualOverride ? Math.round(baseCalc * 0.2) : 0,
       origin: 'web',
       payment_method: null,
     });
@@ -72,7 +82,8 @@ const NewReservation = () => {
       const clientName = profile.name || 'Cliente';
       const clientPhone = profile.phone || 'não informado';
       const bookingDate = format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR });
-      const depositAmount = Math.round(priceInfo.total / 2);
+      const hasManualOverrideMsg = manualPriceOverride && !isNaN(parseFloat(manualPriceOverride));
+      const depositAmount = Math.round(finalTotal / 2);
 
       // Build WhatsApp message for the owner
       const msg = encodeURIComponent(
@@ -82,9 +93,10 @@ const NewReservation = () => {
         `📅 *Data:* ${bookingDate}\n\n` +
         `💰 *Valores:*\n` +
         `• Diária: R$ ${priceInfo.basePrice},00\n` +
-        `• Taxa de limpeza: R$ ${priceInfo.cleaningFee},00\n` +
-        (profile.has_discount ? `• Desconto fidelidade: – R$ ${Math.round((priceInfo.basePrice + priceInfo.cleaningFee) * 0.2)},00\n` : '') +
-        `• *Total: R$ ${priceInfo.total},00*\n` +
+        `• Taxa de limpeza: R$ ${waiveCleaningFee ? '0 (Isento)' : priceInfo.cleaningFee + ',00'}\n` +
+        (profile.has_discount && !hasManualOverrideMsg ? `• Desconto fidelidade: – R$ ${Math.round(baseCalc * 0.2)},00\n` : '') +
+        (hasManualOverrideMsg ? `• Preço Sobrescrito: R$ ${parseFloat(manualPriceOverride)},00\n` : '') +
+        `• *Total: R$ ${finalTotal},00*\n` +
         `• Sinal (50%): R$ ${depositAmount},00\n\n` +
         `⚠️ Reserva aguardando sua confirmação no painel admin.`
       );
@@ -257,6 +269,30 @@ const NewReservation = () => {
                   <p className="font-medium text-foreground">
                     Data selecionada: {format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                   </p>
+
+                  {role === 'admin' && (
+                    <div className="p-3 mb-4 bg-accent/10 border border-accent/20 rounded-lg space-y-3">
+                      <div className="flex items-center gap-2 font-medium text-accent mb-2">
+                        <DollarSign className="w-4 h-4" />
+                        Controles de Administrador
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Isentar Taxa de Limpeza</span>
+                        <Switch checked={waiveCleaningFee} onCheckedChange={setWaiveCleaningFee} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Sobrescrever Preço Final (R$)</Label>
+                        <Input
+                          type="number"
+                          placeholder="Ex: 500"
+                          value={manualPriceOverride}
+                          onChange={(e) => setManualPriceOverride(e.target.value)}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Diária:</span>
@@ -264,22 +300,35 @@ const NewReservation = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Taxa de limpeza:</span>
-                      <span>R$ {priceInfo.cleaningFee},00</span>
+                      <span className={waiveCleaningFee ? 'line-through text-muted-foreground' : ''}>
+                        {waiveCleaningFee ? `R$ ${priceInfo.cleaningFee},00 (Isento)` : `R$ ${priceInfo.cleaningFee},00`}
+                      </span>
                     </div>
-                    {profile?.has_discount && (
+                    {profile?.has_discount && (!manualPriceOverride || isNaN(parseFloat(manualPriceOverride))) && (
                       <div className="flex justify-between text-accent">
                         <span>Desconto fidelidade (20%):</span>
-                        <span>- R$ {Math.round((priceInfo.basePrice + priceInfo.cleaningFee) * 0.2)},00</span>
+                        <span>- R$ {Math.round((priceInfo.basePrice + (waiveCleaningFee ? 0 : priceInfo.cleaningFee)) * 0.2)},00</span>
                       </div>
                     )}
-                    <div className="flex justify-between font-bold text-lg pt-2 border-t border-border">
-                      <span>Total:</span>
-                      <span className="text-primary">R$ {priceInfo.total},00</span>
-                    </div>
-                    <div className="flex justify-between text-sm pt-2 border-t border-border">
-                      <span className="text-muted-foreground">Sinal (50%):</span>
-                      <span className="font-semibold text-accent">R$ {priceInfo.deposit},00</span>
-                    </div>
+
+                    {(() => {
+                      const baseCurrent = priceInfo.basePrice + (waiveCleaningFee ? 0 : priceInfo.cleaningFee);
+                      const hasManual = manualPriceOverride && !isNaN(parseFloat(manualPriceOverride));
+                      const discountCurrent = profile?.has_discount && !hasManual ? Math.round(baseCurrent * 0.2) : 0;
+                      const finalCurrent = hasManual ? parseFloat(manualPriceOverride) : baseCurrent - discountCurrent;
+                      return (
+                        <>
+                          <div className="flex justify-between font-bold text-lg pt-2 border-t border-border">
+                            <span>Total:</span>
+                            <span className="text-primary">R$ {finalCurrent},00</span>
+                          </div>
+                          <div className="flex justify-between text-sm pt-2 border-t border-border">
+                            <span className="text-muted-foreground">Sinal (50%):</span>
+                            <span className="font-semibold text-accent">R$ {Math.round(finalCurrent / 2)},00</span>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               )}

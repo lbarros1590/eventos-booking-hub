@@ -51,6 +51,8 @@ interface ManualBookingData {
     total_price: number;
     status: 'pending' | 'confirmed';
     deposit_paid: boolean;
+    manual_price_override?: number | null;
+    waive_cleaning_fee?: boolean;
     payment_method?: string | null;
     origin: 'admin_manual';
 }

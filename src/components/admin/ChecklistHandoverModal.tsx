@@ -530,8 +530,8 @@ const ChecklistHandoverModal = ({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-2xl max-h-[92vh] flex flex-col overflow-hidden p-0">
-                <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
+            <DialogContent className="w-[95vw] sm:max-w-2xl h-auto max-h-[92vh] flex flex-col overflow-hidden p-0 rounded-xl">
+                <DialogHeader className="px-4 py-4 sm:px-6 sm:pt-6 sm:pb-4 border-b flex-shrink-0">
                     <DialogTitle className="flex items-center gap-2 text-lg">
                         <ClipboardCheck className="w-5 h-5 text-primary" />
                         Checklist de Entrega
@@ -543,7 +543,7 @@ const ChecklistHandoverModal = ({
 
                 {/* ── Phase: Checklist ── */}
                 {phase === 'checklist' && (
-                    <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
+                    <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-5">
                         {/* Progress bar */}
                         <div className="flex items-center justify-between text-sm">
                             <span className="text-muted-foreground">{totalItems} itens</span>
@@ -689,7 +689,7 @@ const ChecklistHandoverModal = ({
 
                 {/* ── Phase: Share ── */}
                 {phase === 'share' && (
-                    <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
+                    <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 space-y-5">
                         <div className="flex flex-col items-center text-center gap-3 py-4">
                             <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center">
                                 <CheckCircle className="w-9 h-9 text-success" />
@@ -759,7 +759,7 @@ const ChecklistHandoverModal = ({
                 )}
 
                 {/* ── Footer ── */}
-                <div className="px-6 py-4 border-t flex-shrink-0 flex gap-3">
+                <div className="px-4 sm:px-6 py-4 border-t flex-shrink-0 flex flex-col sm:flex-row gap-3">
                     {phase === 'checklist' ? (
                         <>
                             <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>

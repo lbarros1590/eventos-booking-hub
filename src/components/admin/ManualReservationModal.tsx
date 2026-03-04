@@ -50,11 +50,14 @@ const ManualReservationModal = ({
     }
   }, [selectedDate, priceInfo]);
 
+  const [waiveCleaningFee, setWaiveCleaningFee] = useState(false);
+
   // Reset form when modal closes
   useEffect(() => {
     if (!open) {
       setSelectedProfileId('');
       setCustomPrice('');
+      setWaiveCleaningFee(false);
       setDepositReceived(false);
       setPaymentMethod('');
       setShowNewClient(false);
@@ -107,7 +110,12 @@ const ManualReservationModal = ({
       return;
     }
 
-    const price = parseFloat(customPrice) || priceInfo?.total || 0;
+    const price = parseFloat(customPrice);
+    const hasCustomPrice = !isNaN(price);
+
+    // Calcula o preço caso não exista preço customizado
+    const baseCalc = priceInfo ? priceInfo.basePrice + (waiveCleaningFee ? 0 : priceInfo.cleaningFee) : 0;
+    const finalTotal = hasCustomPrice ? price : baseCalc;
 
     // Status is determined by deposit payment
     const status = depositReceived ? 'confirmed' : 'pending';
@@ -116,11 +124,13 @@ const ManualReservationModal = ({
     const result = await createManualBooking({
       profile_id: selectedProfileId,
       booking_date: selectedDate.toISOString().split('T')[0],
-      price: priceInfo?.basePrice || price,
+      price: priceInfo?.basePrice || 0,
       cleaning_fee: priceInfo?.cleaningFee || 0,
-      total_price: price,
+      total_price: finalTotal,
       status,
       deposit_paid: depositReceived,
+      manual_price_override: hasCustomPrice ? price : null,
+      waive_cleaning_fee: waiveCleaningFee,
       payment_method: paymentMethod || null,
       origin: 'admin_manual',
     });
@@ -135,7 +145,8 @@ const ManualReservationModal = ({
     setLoading(false);
   };
 
-  const finalPrice = parseFloat(customPrice) || priceInfo?.total || 0;
+  const baseAmount = priceInfo ? priceInfo.basePrice + (waiveCleaningFee ? 0 : priceInfo.cleaningFee) : 0;
+  const finalPrice = customPrice && !isNaN(parseFloat(customPrice)) ? parseFloat(customPrice) : baseAmount;
   const depositAmount = Math.round(finalPrice / 2);
 
   // Sort profiles alphabetically
@@ -268,9 +279,22 @@ const ManualReservationModal = ({
               />
             </div>
             {priceInfo && (
-              <p className="text-xs text-muted-foreground">
-                Preço sugerido: R$ {priceInfo.total} (Diária: R$ {priceInfo.basePrice} + Limpeza: R$ {priceInfo.cleaningFee})
-              </p>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Taxa de limpeza (R$ {priceInfo.cleaningFee})</span>
+                    <Switch
+                      checked={waiveCleaningFee}
+                      onCheckedChange={setWaiveCleaningFee}
+                      className="scale-75"
+                    />
+                    {waiveCleaningFee && <span className="text-xs text-accent">(Isento)</span>}
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Preço sugerido (Diária + Limpeza): R$ {priceInfo.basePrice + (waiveCleaningFee ? 0 : priceInfo.cleaningFee)}
+                </p>
+              </div>
             )}
           </div>
 
